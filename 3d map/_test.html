@@ -21,6 +21,7 @@
   <button id="view">View closely</button><button id="close">Close</button>
   <a target="_blank">NASA mission page</a></div>
 <button id="eye" style="position:absolute;top:10px;left:120px;z-index:1;padding:6px 10px;font:14px sans-serif">Back to orbit</button>
+<script src="config.js"></script>
 <script src="traverses.js"></script>
 <script src="moons.js"></script>
 <script>
@@ -46,9 +47,9 @@ const shade = viewer.imageryLayers.addImageryProvider(trek('Mars_MGS_MOLA_ClrSha
 shade.alpha = 0.4;
 
 // Real 3D Mars relief: Cesium ion "Cesium Mars" 3D Tiles; replaces the flat globe while shown
-Cesium.Ion.defaultAccessToken = 'YOUR_CESIUM_ION_TOKEN';
+Cesium.Ion.defaultAccessToken = window.CESIUM_ION_TOKEN; // from config.js (gitignored)
 let terrain;
-Cesium.Cesium3DTileset.fromIonAssetId(3644333).then(t => {
+if (window.CESIUM_ION_TOKEN) Cesium.Cesium3DTileset.fromIonAssetId(3644333).then(t => {
   terrain = viewer.scene.primitives.add(t);
   viewer.scene.globe.show = false;
 }).catch(err => console.error('Mars terrain failed, staying on flat map', err));
