@@ -1,531 +1,244 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#07121a">
-<title>M.A.R.S. — Mission Control System</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>M.A.R.S. 2.0 — Mars Operations Platform</title>
 <style>
-:root{
-  --bg:#061018;--panel:rgba(7,20,29,.78);--panel2:rgba(10,29,39,.88);
-  --line:rgba(88,218,239,.42);--cyan:#69eaff;--cyan2:#24b9d2;
-  --amber:#ffb45c;--red:#ff5a4f;--green:#8ce6a0;--text:#e5f7fa;
-  --muted:#8db4bf;--shadow:0 0 24px rgba(38,190,218,.10);
-}
-*{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
-body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:2;background:linear-gradient(90deg,rgba(47,190,220,.025) 1px,transparent 1px),linear-gradient(rgba(47,190,220,.025) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,black,transparent 85%)}
-#world{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
-.topbar{position:fixed;z-index:5;left:18px;right:18px;top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:none}
-.brand{display:flex;align-items:center;gap:11px;pointer-events:auto}
-.brand-mark{width:39px;height:39px;border:1px solid var(--cyan);border-radius:50%;display:grid;place-items:center;color:var(--cyan);font-size:19px;box-shadow:0 0 18px #2bbbd533}
-.brand h1{font-size:19px;letter-spacing:4px;margin:0;color:var(--cyan);font-weight:700}
-.brand small{display:block;color:var(--muted);font-size:9px;letter-spacing:2px;margin-top:3px}
-.top-status{display:flex;gap:8px;align-items:center;pointer-events:auto}
-.pill{border:1px solid var(--line);background:var(--panel);padding:8px 11px;border-radius:3px;font-size:10px;letter-spacing:1.2px;color:var(--muted);backdrop-filter:blur(12px)}
-.pill strong{color:var(--cyan);font-weight:700}
-.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:7px;box-shadow:0 0 8px var(--green)}
-.layout{position:fixed;z-index:4;inset:68px 16px 56px;display:grid;grid-template-columns:minmax(230px,270px) 1fr minmax(230px,270px);gap:12px;pointer-events:none}
-.column{display:flex;flex-direction:column;gap:10px;min-height:0}
-.panel{pointer-events:auto;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);backdrop-filter:blur(12px);border-radius:5px;padding:12px;position:relative;overflow:hidden}
-.panel:before{content:"";position:absolute;left:0;top:0;width:34px;height:2px;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
-.panel-title{display:flex;justify-content:space-between;align-items:center;color:var(--cyan);font-size:10px;letter-spacing:1.7px;font-weight:700;margin-bottom:11px}
-.panel-title span:last-child{font-size:9px;color:var(--muted);font-weight:400;letter-spacing:1px}
-.metric{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin:7px 0;font-size:11px;color:var(--muted)}
-.metric b{font-size:13px;color:var(--text);font-weight:600;text-align:right}
-.metric b.cyan{color:var(--cyan)}.metric b.amber{color:var(--amber)}.metric b.red{color:var(--red)}
-.rule{height:1px;background:rgba(100,205,224,.15);margin:9px 0}
-.bar{height:5px;background:#17303a;border-radius:10px;overflow:hidden;margin-top:5px}
-.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan2),var(--cyan));box-shadow:0 0 10px var(--cyan);width:70%;transition:width .3s}
-.bar.amber i{background:linear-gradient(90deg,#bd6b27,var(--amber));box-shadow:0 0 10px var(--amber)}
-.center{position:relative;pointer-events:none;min-width:0}
-.center-top{position:absolute;top:8px;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;text-shadow:0 2px 8px #000}
-.center-top .coordinates{font-size:10px;letter-spacing:2px;color:var(--cyan)}
-.center-top .location{font-size:9px;color:#d5b39a;letter-spacing:1.5px;margin-top:5px}
-.center-bottom{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-size:10px;color:#d3e9ed;letter-spacing:1px;text-align:center;text-shadow:0 2px 8px #000;white-space:nowrap}
-.crosshair{position:absolute;left:50%;top:50%;width:18px;height:18px;transform:translate(-50%,-50%);border:1px solid rgba(105,234,255,.7);border-radius:50%;opacity:.75}
-.crosshair:before,.crosshair:after{content:"";position:absolute;background:var(--cyan);opacity:.7}
-.crosshair:before{width:1px;height:30px;left:8px;top:-7px}.crosshair:after{height:1px;width:30px;top:8px;left:-7px}
-.minimap{width:100%;aspect-ratio:1;display:block;background:#21140f;border:1px solid rgba(105,234,255,.28);border-radius:3px}
-.map-wrap{position:relative}
-.map-legend{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:7px}
-.legend-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px}
-.controls{position:fixed;z-index:6;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:7px;align-items:center;pointer-events:auto}
-button,.tab{border:1px solid var(--line);background:rgba(5,18,26,.9);color:var(--cyan);padding:9px 12px;border-radius:3px;font-size:10px;letter-spacing:1px;cursor:pointer;transition:.2s}
-button:hover,.tab:hover,button.active,.tab.active{background:rgba(35,153,177,.22);border-color:var(--cyan);box-shadow:0 0 12px #32d3ed22}
-button:focus-visible,.tab:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
-.alert{display:none;border-color:var(--red);color:#ffd0c9}
-.alert.show{display:block;animation:pulse 1.4s infinite}
-@keyframes pulse{50%{box-shadow:0 0 18px #ff5a4f55}}
-.small-note{font-size:9px;color:var(--muted);line-height:1.45}
-.tabs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
-.tab{padding:7px 9px;font-size:9px}
-.modal-backdrop{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;padding:18px}
-.modal-backdrop.open{display:flex}
-.modal{width:min(760px,100%);max-height:min(82vh,760px);overflow:auto;background:rgba(5,17,25,.97);border:1px solid var(--line);box-shadow:0 0 50px #23b9d233;border-radius:6px;padding:18px;position:relative}
-.modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
-.modal-head h2{font-size:15px;letter-spacing:2px;color:var(--cyan);margin:0}
-.close{font-size:18px;padding:5px 10px}
-.modal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.data-card{padding:12px;border:1px solid rgba(105,234,255,.2);background:rgba(13,37,48,.55);border-radius:4px}
-.data-card h3{font-size:11px;letter-spacing:1px;color:var(--amber);margin:0 0 7px}
-.data-card p{font-size:11px;line-height:1.55;color:#bdd4d9;margin:0}
-.data-card strong{color:var(--text)}
-.search{width:100%;background:#0a202a;border:1px solid var(--line);color:var(--text);padding:10px;margin:0 0 12px;border-radius:3px;outline:none}
-.search:focus{border-color:var(--cyan)}
-.log{font-family:Consolas,monospace;font-size:10px;line-height:1.65;color:#b4d5dc;max-height:190px;overflow:auto}
-.log div:before{content:"> ";color:var(--cyan)}
-.footer{position:fixed;z-index:5;bottom:8px;left:16px;right:16px;display:flex;justify-content:space-between;pointer-events:none;color:#8db4bf;font-size:9px;letter-spacing:1px;text-shadow:0 1px 5px #000}
-@media(max-width:900px){
- .layout{grid-template-columns:210px 1fr 210px;inset:65px 9px 55px;gap:7px}
- .panel{padding:9px}.metric{font-size:10px}.metric b{font-size:11px}
-}
-@media(max-width:680px){
- .topbar{left:9px;right:9px}.brand h1{font-size:15px}.brand small{font-size:8px}
- .top-status .pill:nth-child(2){display:none}
- .layout{inset:62px 8px 58px;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr;gap:7px}
- .column.left{grid-column:1;grid-row:1;max-height:34vh;overflow:auto}
- .column.right{grid-column:2;grid-row:1;max-height:34vh;overflow:auto}
- .center{grid-column:1/3;grid-row:2}
- .center-top{top:5px}.center-bottom{bottom:3px;font-size:8px}
- .panel{padding:8px}.panel-title{font-size:9px;margin-bottom:7px}
- .metric{margin:5px 0;font-size:9px}.metric b{font-size:10px}
- .minimap{max-height:120px}
- .controls{bottom:max(8px,env(safe-area-inset-bottom));width:calc(100% - 16px);justify-content:center;flex-wrap:wrap}
- button{padding:8px 9px;font-size:9px}
- .footer{display:none}
- .modal-grid{grid-template-columns:1fr}
-}
-</style>
-</head>
-<body>
+:root{--bg:#061018;--panel:rgba(7,20,29,.8);--line:rgba(88,218,239,.4);--cyan:#69eaff;--amber:#ffb45c;--red:#ff5a4f;--green:#8ce6a0;--text:#e5f7fa;--muted:#8db4bf}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+#world{position:fixed;inset:0;width:100%;height:100%;touch-action:none}
+.top{position:fixed;z-index:5;left:14px;right:14px;top:max(10px,env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:center;pointer-events:none;gap:8px}
+.top h1{margin:0;font-size:17px;letter-spacing:4px;color:var(--cyan)}.top small{display:block;font-size:8px;letter-spacing:2px;color:var(--muted);margin-top:2px}
+.pill{border:1px solid var(--line);background:var(--panel);padding:7px 10px;border-radius:3px;font-size:10px;letter-spacing:1px;color:var(--muted);margin-left:6px;display:inline-block}.pill b{color:var(--cyan)}
+.layout{position:fixed;z-index:4;inset:60px 14px 92px;display:grid;grid-template-columns:minmax(220px,265px) 1fr minmax(220px,265px);gap:10px;pointer-events:none}
+.col{display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto;scrollbar-width:none}
+.panel{pointer-events:auto;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(10px);border-radius:4px;padding:10px;position:relative;flex:none}
+.panel:before{content:"";position:absolute;left:0;top:0;width:30px;height:2px;background:var(--cyan)}
+.pt{display:flex;justify-content:space-between;color:var(--cyan);font-size:10px;letter-spacing:1.6px;font-weight:700;margin-bottom:8px}.pt span+span{color:var(--muted);font-weight:400;font-size:9px}
+.m{display:flex;justify-content:space-between;gap:6px;margin:5px 0;font-size:11px;color:var(--muted)}.m b{color:var(--text);font-size:12px;text-align:right}.cyan{color:var(--cyan)!important}.amber{color:var(--amber)!important}.red{color:var(--red)!important}.green{color:var(--green)!important}
+.bar{height:4px;background:#17303a;border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;background:var(--cyan);width:50%}
+.note{font-size:9px;color:var(--muted);line-height:1.45}
+.center{position:relative;pointer-events:none}
+.ctop{position:absolute;top:2px;left:50%;transform:translateX(-50%);display:flex;gap:18px;text-align:center;white-space:nowrap;text-shadow:0 2px 8px #000;background:rgba(5,15,22,.55);padding:6px 14px;border:1px solid rgba(88,218,239,.2);border-radius:3px}
+.ctop div{font-size:9px;color:var(--muted);letter-spacing:1.5px}.ctop b{display:block;font-size:13px;color:var(--cyan);margin-top:3px;letter-spacing:1px}
+.xh{position:absolute;left:50%;top:50%;width:16px;height:16px;transform:translate(-50%,-50%);border:1px solid rgba(105,234,255,.7);border-radius:50%}
+canvas.mm{width:100%;aspect-ratio:1;display:block;background:#21140f;border:1px solid rgba(105,234,255,.25);cursor:crosshair}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px}
+button{border:1px solid var(--line);background:rgba(5,18,26,.9);color:var(--cyan);padding:8px 10px;border-radius:3px;font-size:10px;letter-spacing:1px;cursor:pointer}
+button:hover,button.on{background:rgba(35,153,177,.25);border-color:var(--cyan)}button:focus-visible{outline:2px solid var(--amber)}
+.tabs button{padding:5px 7px;font-size:9px}
+.ctl{position:fixed;z-index:6;left:50%;bottom:max(10px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;width:min(1000px,calc(100% - 20px))}
+.log{font:10px/1.6 Consolas,monospace;color:#b4d5dc;max-height:120px;overflow:auto}.log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.log .w{color:var(--amber)}.log .c{color:var(--red)}
+.mb{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;padding:16px}.mb.open{display:flex}
+.modal{width:min(780px,100%);max-height:84vh;overflow:auto;background:rgba(5,17,25,.97);border:1px solid var(--line);border-radius:5px;padding:16px}
+.mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.mh h2{margin:0;font-size:14px;letter-spacing:2px;color:var(--cyan)}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:9px}.card{padding:11px;border:1px solid rgba(105,234,255,.2);background:rgba(13,37,48,.55);border-radius:4px;font-size:11px;line-height:1.55;color:#bdd4d9;cursor:default}.card h3{margin:0 0 6px;font-size:11px;letter-spacing:1px;color:var(--amber)}.card strong{color:var(--text)}.card.k{cursor:pointer}.card.k:hover{border-color:var(--cyan)}
+#gmap{width:100%;display:block;background:#1a0f0b;border:1px solid var(--line);cursor:pointer}
+@media(max-width:900px){.layout{grid-template-columns:200px 1fr 200px}.ctop{display:none}}
+@media(max-width:680px){.layout{grid-template-columns:1fr 1fr;grid-template-rows:34vh 1fr;inset:56px 8px 120px}.col{max-height:34vh}.center{grid-column:1/3}.pill:nth-child(n+2){display:none}.g{grid-template-columns:1fr}button{padding:7px 8px;font-size:9px}}
+.helmet{position:fixed;inset:0;z-index:3;pointer-events:none}.visor{position:absolute;inset:1.5% 1%;border-radius:30%/38%;box-shadow:0 0 0 100vmax #070a0d,inset 0 0 90px 30px rgba(0,0,0,.55),inset 0 0 0 2px rgba(120,160,175,.25);background:linear-gradient(115deg,rgba(255,255,255,.05) 0,transparent 18%,transparent 70%,rgba(255,255,255,.04) 80%,transparent 90%),url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><path d='M40 60l70 30M300 40l-50 80M120 240l90-20M330 220l30-40' stroke='white' stroke-opacity='.08' fill='none'/></svg>")}.dustov{position:absolute;inset:0;border-radius:30%/38%;background:radial-gradient(ellipse at 50% 100%,rgba(160,100,70,.55),transparent 60%),radial-gradient(circle at 15% 25%,rgba(150,95,65,.3),transparent 30%);opacity:0;transition:opacity 1s}.hh{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 86px);transform:translateX(-50%);display:flex;gap:14px;font:10px Consolas,monospace;letter-spacing:1px;color:var(--cyan);background:rgba(4,16,22,.55);padding:6px 12px;border:1px solid rgba(105,234,255,.25);border-radius:12px;white-space:nowrap}.hh b{color:#e5f7fa}.hh i{display:inline-block;width:46px;height:4px;background:#17303a;vertical-align:middle;margin-left:4px}.hh u{display:block;height:100%;background:var(--green)}.xh{width:5px;height:5px;border:0;background:#69eaff;box-shadow:0 0 6px #69eaff;transition:.15s}.xh.t{width:12px;height:12px;background:transparent;border:1px solid #8ce6a0;box-shadow:0 0 8px #8ce6a0}#xl{position:absolute;left:50%;top:calc(50% + 16px);transform:translateX(-50%);font:9px Consolas,monospace;letter-spacing:1.5px;color:#8ce6a0;text-shadow:0 1px 4px #000;white-space:nowrap}.panel.c>*:not(.pt){display:none}.panel.c .pt{margin-bottom:0}.pt{cursor:pointer}.mb{z-index:40}#menu{position:fixed;inset:0;z-index:30;display:flex;align-items:center;padding:0 8vw;background:linear-gradient(90deg,rgba(3,8,12,.92),rgba(3,8,12,.35) 70%,transparent)}#menu.off{display:none}.mbox{width:min(340px,100%)}.mbox h1{margin:0;font-size:30px;letter-spacing:7px;color:var(--cyan)}.mbox small{display:block;margin:6px 0 24px;font-size:9px;letter-spacing:3px;color:var(--muted)}.mbox button{display:block;width:100%;text-align:left;margin:0 0 7px;padding:12px 16px;font-size:11px;letter-spacing:3px}.mbox button:disabled{opacity:.35;cursor:default}.globe{position:absolute;right:8vw;top:50%;width:min(44vmin,380px);aspect-ratio:1;transform:translateY(-50%);border-radius:50%;background:radial-gradient(circle at 32% 30%,rgba(255,200,160,.5),transparent 35%),repeating-linear-gradient(100deg,#b4553a 0,#8d3a26 40px,#c27049 90px,#a04a30 140px);background-size:auto,560px 100%;animation:spin 60s linear infinite;box-shadow:inset -50px -30px 80px #000,0 0 70px rgba(230,120,80,.3)}@keyframes spin{to{background-position:0 0,-560px 0}}#tut{position:fixed;z-index:7;left:50%;top:max(118px,calc(env(safe-area-inset-top) + 100px));transform:translateX(-50%);padding:10px 16px;border:1px solid var(--amber);background:rgba(20,12,5,.8);border-radius:4px;font-size:11px;letter-spacing:1.5px;color:var(--amber);text-align:center;display:none;max-width:90vw}#joy,#jb{position:fixed;z-index:7;display:none}.touch #joy{display:block;left:22px;bottom:130px;width:104px;height:104px;border-radius:50%;border:1px solid var(--line);background:rgba(5,18,26,.5);touch-action:none}#joy i{position:absolute;left:34px;top:34px;width:36px;height:36px;border-radius:50%;background:rgba(105,234,255,.35)}.touch #jb{display:block;right:22px;bottom:130px;width:64px;height:64px;border-radius:50%}@media(max-width:680px){.globe{display:none}.hh{gap:7px;font-size:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}}</style></head><body><div class='helmet'><div class='visor' id='visor'></div><div class='dustov' id='dustov'></div><div class='hh'><span>SOL <b id='hSol'>1</b></span><span>O₂ <b id='hO'>--</b></span><span>BAT <b id='hB'>--</b></span><span>COMM <b id='hC'>OK</b></span><span>SOL PWR <b id='hS'>--</b></span><span>TEMP <b id='hT'>--</b></span><span>STA<i><u id='hSt' style='width:100%'></u></i></span><span><b id='hM'>NOMINAL</b></span></div></div><div id='tut'></div><div id='joy'><i></i></div><button id='jb'>JUMP</button><div id='menu'><div class='mbox'><h1>M.A.R.S.</h1><small id='msub'>EXPLORER</small><div id='mbtn'></div></div><div class='globe' id='globe'></div></div>
 <canvas id="world"></canvas>
-
-<header class="topbar">
-  <div class="brand">
-    <div class="brand-mark">✧</div>
-    <div><h1>M.A.R.S.</h1><small>MISSION ASSISTANCE & RECONNAISSANCE SYSTEM</small></div>
-  </div>
-  <div class="top-status">
-    <div class="pill"><span class="dot"></span><strong id="systemState">SYSTEM ONLINE</strong></div>
-    <div class="pill">MISSION <strong>ARES-01</strong></div>
-    <div class="pill">SOL <strong id="solTop">001</strong></div>
-  </div>
-</header>
-
+<header class="top"><div><h1>M.A.R.S. 2.0</h1><small>MARS OPERATIONS &amp; EXPLORATION PLATFORM</small></div><div><span class="pill"><b id="sys">SYSTEM ONLINE</b></span><span class="pill">SOL <b id="sol">001</b></span><span class="pill">LMST <b id="lmst">--:--</b></span></div></header>
 <main class="layout">
-  <aside class="column left">
-    <section class="panel">
-      <div class="panel-title"><span>PLANETARY TELEMETRY</span><span>REFERENCE</span></div>
-      <div class="metric"><span>Surface gravity</span><b class="cyan">3.71 m/s²</b></div>
-      <div class="metric"><span>Atmospheric pressure</span><b>6.4 mbar</b></div>
-      <div class="metric"><span>Mean temperature</span><b>−63 °C</b></div>
-      <div class="metric"><span>Solar irradiance</span><b>586 W/m²</b></div>
-      <div class="metric"><span>Atmospheric CO₂</span><b>≈95%</b></div>
-      <div class="metric"><span>Atmospheric O₂</span><b>≈0.16%</b></div>
-      <div class="rule"></div>
-      <div class="metric"><span>Martian day</span><b>24h 39m 35s</b></div>
-      <div class="metric"><span>Martian year</span><b>687 Earth days</b></div>
-      <div class="small-note">Planetary reference values; local conditions vary by location, season and time of day.</div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-title"><span>LIFE SUPPORT</span><span id="lifeState">SIMULATION</span></div>
-      <div class="metric"><span>Oxygen reserve</span><b id="oxygenText" class="cyan">08:00:00</b></div>
-      <div class="bar"><i id="oxygenBar" style="width:100%"></i></div>
-      <div class="metric"><span>Habitat pressure</span><b>101.3 kPa*</b></div>
-      <div class="metric"><span>Habitat temperature</span><b>21 °C*</b></div>
-      <div class="metric"><span>Water reserve</span><b id="waterText">82%</b></div>
-      <div class="bar"><i id="waterBar" style="width:82%"></i></div>
-      <div class="metric"><span>CO₂ scrubber</span><b class="cyan">NOMINAL*</b></div>
-      <div class="small-note">*Illustrative habitat setpoints/status, not actual spacecraft readings.</div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-title"><span>POWER MANAGEMENT</span><span>SIMULATED</span></div>
-      <div class="metric"><span>Solar generation</span><b id="solarText">— kW</b></div>
-      <div class="bar amber"><i id="solarBar" style="width:68%"></i></div>
-      <div class="metric"><span>Battery reserve</span><b id="batteryText">68%</b></div>
-      <div class="bar"><i id="batteryBar" style="width:68%"></i></div>
-      <div class="metric"><span>Backup fission</span><b class="amber">STANDBY*</b></div>
-      <div class="small-note">Solar output is a simplified demo estimate, not a site-specific engineering forecast.</div>
-    </section>
-  </aside>
-
-  <section class="center">
-    <div class="center-top">
-      <div class="coordinates">SURFACE POSITION <span id="coords">X 000 · Z 000</span></div>
-      <div class="location">MARS / ARCADIA REGION — SIMULATED TERRAIN</div>
-    </div>
-    <div class="crosshair"></div>
-    <div class="center-bottom">WASD MOVE&nbsp;&nbsp; • &nbsp;&nbsp;SHIFT RUN&nbsp;&nbsp; • &nbsp;&nbsp;MOUSE LOOK&nbsp;&nbsp; • &nbsp;&nbsp;DRAG ON TOUCH</div>
-  </section>
-
-  <aside class="column right">
-    <section class="panel">
-      <div class="panel-title"><span>ENVIRONMENTAL SCANNER</span><span>SIMULATED</span></div>
-      <div class="metric"><span>Local temperature</span><b id="temperature">−63 °C</b></div>
-      <div class="metric"><span>Radiation indicator</span><b id="radiation">0.50 µSv/h</b></div>
-      <div class="metric"><span>Dust conditions</span><b id="dustStatus" class="cyan">CLEAR</b></div>
-      <div class="metric"><span>Wind estimate</span><b id="wind">12 m/s</b></div>
-      <div id="stormAlert" class="metric alert"><span>⚠ DUST HAZARD</span><b>NEARBY</b></div>
-      <div class="small-note">Environmental readings are illustrative gameplay values. Radiation and wind are not real-time Mars measurements.</div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-title"><span>SURFACE NAVIGATION</span><span>LOCAL MAP</span></div>
-      <div class="map-wrap"><canvas id="minimap" class="minimap" width="240" height="240"></canvas></div>
-      <div class="map-legend">
-        <span><i class="legend-dot" style="background:#fff"></i>YOU</span>
-        <span><i class="legend-dot" style="background:#8ce6a0"></i>ROVER</span>
-        <span><i class="legend-dot" style="background:#ff5a4f"></i>HAZARD</span>
-      </div>
-      <div class="metric"><span>Rover distance</span><b id="roverDistance">— m</b></div>
-      <div class="metric"><span>Mission zone</span><b>ARES-01</b></div>
-    </section>
-
-    <section class="panel">
-      <div class="panel-title"><span>MISSION INTELLIGENCE</span><span>NETWORK</span></div>
-      <div class="metric"><span>Earth signal delay</span><b>3–22 min one-way</b></div>
-      <div class="metric"><span>Earth–Mars distance</span><b>55–400 million km</b></div>
-      <div class="metric"><span>Water ice</span><b class="amber">POTENTIAL RESOURCE</b></div>
-      <div class="metric"><span>MOXIE technology</span><b class="cyan">O₂ DEMONSTRATED*</b></div>
-      <div class="small-note">*NASA's MOXIE experiment demonstrated small-scale oxygen production from Martian CO₂; settlement-scale production remains unproven.</div>
-    </section>
-  </aside>
-</main>
-
-<nav class="controls" aria-label="Mission controls">
-  <button id="btnScan">⌕ ENVIRONMENT SCAN</button>
-  <button id="btnResources">◇ RESOURCE SCAN</button>
-  <button id="btnRover">◎ TRACK ROVER</button>
-  <button id="btnDatabase">▤ MISSION DATABASE</button>
-  <button id="btnAssistant">✧ MISSION AI</button>
-</nav>
-
-<footer class="footer">
-  <span>ARES-01 // MARS SURFACE EXPLORATION</span>
-  <span>REFERENCE DATA + LOCAL SIMULATION // NOT LIVE SPACECRAFT TELEMETRY</span>
-  <span id="missionClock">MISSION ELAPSED 00:00:00</span>
-</footer>
-
-<div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-  <div class="modal">
-    <div class="modal-head"><h2 id="modalTitle">MISSION MODULE</h2><button class="close" id="closeModal" aria-label="Close">×</button></div>
-    <div id="modalContent"></div>
-  </div>
-</div>
-
+<aside class="col">
+<section class="panel"><div class="pt"><span>LIFE &amp; POWER</span><span>SIMULATED</span></div>
+<div class="m"><span>Oxygen reserve</span><b id="o2" class="cyan"></b></div><div class="bar"><i id="o2b"></i></div>
+<div class="m"><span>Water reserve</span><b id="wat"></b></div><div class="bar"><i id="watb"></i></div>
+<div class="m"><span>Solar generation</span><b id="sola"></b></div><div class="bar"><i id="solb" style="background:var(--amber)"></i></div>
+<div class="m"><span>Battery</span><b id="bat"></b></div><div class="bar"><i id="batb"></i></div>
+<div class="m"><span>Comms link</span><b id="comm" class="green">NOMINAL</b></div>
+<div class="note">Reference: g 3.71 m/s², 6.4 mbar, ≈95% CO₂, 586 W/m², sol 24h39m35s. Habitat/power values are illustrative.</div></section>
+<section class="panel"><div class="pt"><span>MISSION 01 · WATER EVIDENCE</span><span id="pts">0 PTS</span></div><div id="obj" class="note" style="font-size:11px;line-height:1.8"></div></section>
+<section class="panel"><div class="pt"><span>MISSION TIMELINE</span><span>AUTO</span></div><div class="log" id="tl"></div></section>
+</aside>
+<section class="center"><div class="ctop"><div>ALTITUDE<b id="alt">0 m</b></div><div>POSITION<b id="pos">0 · 0</b></div><div>STATUS<b id="stat">NOMINAL</b></div><div>OBJECTIVE<b id="curobj">—</b></div></div><div class="xh" id="xh"></div><div id="xl"></div></section>
+<aside class="col">
+<section class="panel"><div class="pt"><span>ENVIRONMENT</span><span>SIMULATED</span></div>
+<div class="m"><span>Temperature</span><b id="tmp"></b></div><div class="m"><span>Radiation</span><b id="rad"></b></div><div class="m"><span>Visibility</span><b id="vis"></b></div><div class="m"><span>Sun elevation</span><b id="sunel"></b></div><div class="m"><span>Dust</span><b id="dust" class="cyan"></b></div></section>
+<section class="panel"><div class="pt"><span>SURFACE NAVIGATION</span><span id="lyr">SURFACE</span></div>
+<div class="tabs" id="lt"></div><canvas id="mm" class="mm" width="240" height="240"></canvas><div class="note" id="leg" style="margin-top:6px"></div></section>
+<section class="panel"><div class="pt"><span>DUST STORMS</span><span>TRACKED</span></div><div id="st" class="note" style="font-size:10px;line-height:1.7"></div></section>
+<section class="panel"><div class="pt"><span>PHOBOS / DEIMOS</span><span>CLICK</span></div><div id="mn" class="note" style="font-size:10px;line-height:1.7"></div></section>
+<section class="panel"><div class="pt"><span>OPERATIONS CONSOLE</span><span>LIVE</span></div><div class="log" id="ops"></div></section>
+</aside></main>
+<nav class="ctl"><button id="bScan">ENV SCAN</button><button id="bRes">RESOURCE SCAN</button><button id="bRov">TRACK ROVER</button><button id="bSites">LANDING SITES</button><button id="bMap">GLOBAL MAP (M)</button><button id="bOrb">ORBITS</button><button id="bDb">DATABASE</button><button id="bAI">MISSION AI</button><button id="bTime">TIME ×1</button></nav>
+<div class="mb" id="mb" role="dialog" aria-modal="true"><div class="modal"><div class="mh"><h2 id="mt"></h2><button id="mx" aria-label="Close">×</button></div><div id="mc"></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-(() => {
-  "use strict";
-  const $ = id => document.getElementById(id);
-  const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
-  const fmtTime = s => {
-    s=Math.max(0,Math.floor(s));
-    return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(v=>String(v).padStart(2,"0")).join(":");
-  };
-
-  // ---------- 3D Mars environment ----------
-  const canvas=$("world");
-  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
-  renderer.outputEncoding=THREE.sRGBEncoding;
-  const scene=new THREE.Scene();
-  scene.background=new THREE.Color(0xb66f51);
-  scene.fog=new THREE.FogExp2(0xb66f51,0.0105);
-  const camera=new THREE.PerspectiveCamera(72,1,0.1,1800);
-  scene.add(new THREE.HemisphereLight(0xffd9bd,0x512414,1.0));
-  const sunlight=new THREE.DirectionalLight(0xffe8d2,1.25);
-  sunlight.position.set(100,150,60);scene.add(sunlight);
-
-  const heightAt=(x,z)=>
-    Math.sin(x*.018)*Math.cos(z*.016)*8+
-    Math.sin(x*.065+z*.045)*2.3+
-    Math.cos(z*.105)*1.1+
-    Math.sin(Math.hypot(x+65,z-35)*.035)*1.4;
-
-  const terrain=new THREE.PlaneGeometry(620,620,170,170);
-  terrain.rotateX(-Math.PI/2);
-  const positions=terrain.attributes.position,colors=[];
-  for(let i=0;i<positions.count;i++){
-    const x=positions.getX(i),z=positions.getZ(i),y=heightAt(x,z);
-    positions.setY(i,y);
-    const t=clamp((y+13)/26,0,1),noise=Math.random()*.035;
-    colors.push(.43+t*.22+noise,.16+t*.12+noise,.085+t*.065);
-  }
-  terrain.setAttribute("color",new THREE.Float32BufferAttribute(colors,3));
-  terrain.computeVertexNormals();
-  scene.add(new THREE.Mesh(terrain,new THREE.MeshLambertMaterial({vertexColors:true})));
-
-  const rockMaterial=new THREE.MeshLambertMaterial({color:0x74391f});
-  const rocks=[];
-  for(let i=0;i<190;i++){
-    const x=(Math.random()-.5)*580,z=(Math.random()-.5)*580,s=.5+Math.random()*2.2;
-    const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(s,0),rockMaterial);
-    rock.position.set(x,heightAt(x,z)+s*.25,z);
-    rock.rotation.set(Math.random()*3,Math.random()*3,Math.random()*3);
-    rock.userData.radius=s*1.2;scene.add(rock);rocks.push(rock);
-  }
-
-  // Distant ridge silhouettes
-  for(let j=0;j<9;j++){
-    const ridge=new THREE.Mesh(new THREE.ConeGeometry(24+Math.random()*28,22+Math.random()*30,5),
-      new THREE.MeshLambertMaterial({color:0x7b3928}));
-    ridge.position.set(-250+j*65,7,-245-Math.random()*45);
-    ridge.rotation.y=Math.random()*Math.PI;scene.add(ridge);
-  }
-
-  const phobos=new THREE.Mesh(new THREE.SphereGeometry(11,18,14),new THREE.MeshBasicMaterial({color:0x9b887b}));
-  phobos.scale.set(1.25,.85,1);scene.add(phobos);
-  const deimos=new THREE.Mesh(new THREE.SphereGeometry(6,16,12),new THREE.MeshBasicMaterial({color:0xb6a393}));
-  scene.add(deimos);
-
-  const rover=new THREE.Group();
-  const chassis=new THREE.Mesh(new THREE.BoxGeometry(3.2,1.0,4.3),new THREE.MeshLambertMaterial({color:0xd8d9d2}));
-  chassis.position.y=1.6;rover.add(chassis);
-  const deck=new THREE.Mesh(new THREE.BoxGeometry(2.2,.25,2.5),new THREE.MeshLambertMaterial({color:0x9da8a7}));
-  deck.position.set(0,2.2,-.15);rover.add(deck);
-  const mast=new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,2.0,8),new THREE.MeshLambertMaterial({color:0xbac4c2}));
-  mast.position.set(0,3.2,-1.1);rover.add(mast);
-  const cameraHead=new THREE.Mesh(new THREE.BoxGeometry(.7,.45,.55),new THREE.MeshLambertMaterial({color:0x253c47}));
-  cameraHead.position.set(0,4.1,-1.1);rover.add(cameraHead);
-  const wheelMat=new THREE.MeshLambertMaterial({color:0x242b2d});
-  for(const x of [-1.75,1.75])for(const z of [-1.35,0,1.35]){
-    const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.58,.58,.35,12),wheelMat);
-    wheel.rotation.z=Math.PI/2;wheel.position.set(x,1,z);rover.add(wheel);
-  }
-  const roverPos={x:92,z:-72};scene.add(rover);
-  const beacon=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,32,8),
-    new THREE.MeshBasicMaterial({color:0x8ce6a0,transparent:true,opacity:.7}));
-  scene.add(beacon);
-
-  const storm={x:-125,z:-135,r:72};
-  const stormRing=new THREE.Mesh(new THREE.CylinderGeometry(storm.r,storm.r,35,48,1,true),
-    new THREE.MeshBasicMaterial({color:0xff493c,transparent:true,opacity:.16,side:THREE.DoubleSide,depthWrite:false}));
-  stormRing.position.set(storm.x,heightAt(storm.x,storm.z)+18,storm.z);scene.add(stormRing);
-  const stormParticles=new THREE.Group();scene.add(stormParticles);
-  const dustMat=new THREE.MeshBasicMaterial({color:0xe5a17b,transparent:true,opacity:.35});
-  for(let i=0;i<100;i++){
-    const p=new THREE.Mesh(new THREE.SphereGeometry(.35+Math.random()*.7,5,5),dustMat);
-    p.position.set(storm.x+(Math.random()-.5)*storm.r*2,5+Math.random()*25,storm.z+(Math.random()-.5)*storm.r*2);
-    p.userData.speed=.4+Math.random()*1.2;stormParticles.add(p);
-  }
-
-  // Player, controls and collision
-  const player={x:0,z:0,yaw:0,pitch:0,keys:{},drag:null};
-  window.addEventListener("keydown",e=>{player.keys[e.code]=true;if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code))e.preventDefault();});
-  window.addEventListener("keyup",e=>player.keys[e.code]=false);
-  canvas.addEventListener("click",()=>{if(!("ontouchstart" in window)&&canvas.requestPointerLock)canvas.requestPointerLock();});
-  canvas.addEventListener("pointerdown",e=>{if(e.pointerType==="touch")player.drag={x:e.clientX,y:e.clientY};});
-  window.addEventListener("pointerup",()=>player.drag=null);
-  window.addEventListener("pointermove",e=>{
-    if(document.pointerLockElement===canvas){player.yaw-=e.movementX*.0022;player.pitch-=e.movementY*.0022;}
-    else if(player.drag){player.yaw-=(e.clientX-player.drag.x)*.004;player.pitch-=(e.clientY-player.drag.y)*.004;player.drag={x:e.clientX,y:e.clientY};}
-    player.pitch=clamp(player.pitch,-1.25,1.25);
-  });
-
-  function collides(x,z){
-    for(const r of rocks){const dx=x-r.position.x,dz=z-r.position.z;if(dx*dx+dz*dz<(r.userData.radius+1.4)**2)return true;}
-    return false;
-  }
-  function resize(){
-    const w=window.innerWidth,h=window.innerHeight;
-    renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
-  }
-  window.addEventListener("resize",resize);resize();
-
-  // ---------- Mission simulation ----------
-  const mission={elapsed:0,oxygen:8*3600,water:82,battery:68,scanUntil:0,resourceUntil:0,followRover:false};
-  const minimap=$("minimap"),mapCtx=minimap.getContext("2d");
-  const log=[];
-  function addLog(message){
-    const stamp=fmtTime(mission.elapsed);
-    log.unshift({stamp,message});if(log.length>40)log.pop();
-  }
-  addLog("M.A.R.S. mission systems initialized.");
-  addLog("Planetary reference database loaded.");
-  addLog("Local environment simulation active.");
-
-  function updateHUD(dt,now){
-    const dx=player.x-roverPos.x,dz=player.z-roverPos.z;
-    const distance=Math.hypot(dx,dz);
-    const inStorm=Math.hypot(player.x-storm.x,player.z-storm.z)<storm.r;
-    const nearStorm=Math.hypot(player.x-storm.x,player.z-storm.z)<storm.r+42;
-    mission.oxygen=Math.max(0,mission.oxygen-dt*(inStorm?3:1));
-    mission.water=Math.max(0,mission.water-dt*.00012);
-    mission.battery=clamp(mission.battery+dt*(inStorm?-.0018:.00035),8,100);
-    const dayPhase=(mission.elapsed/1800)%1;
-    const localTemp=-63+Math.sin(dayPhase*Math.PI*2)*24;
-    const radiation=inStorm?0.72:0.50;
-    const wind=inStorm?34:12;
-    const solar=clamp(0.586*4.5*(.45+.55*Math.max(0,Math.sin(dayPhase*Math.PI*2))) * (inStorm?.28:1),0,3.0);
-
-    $("oxygenText").textContent=fmtTime(mission.oxygen);
-    $("oxygenBar").style.width=(mission.oxygen/(8*3600)*100)+"%";
-    $("oxygenBar").style.background=mission.oxygen<1800?"var(--red)":"";
-    $("waterText").textContent=mission.water.toFixed(0)+"%";
-    $("waterBar").style.width=mission.water+"%";
-    $("batteryText").textContent=mission.battery.toFixed(0)+"%";
-    $("batteryBar").style.width=mission.battery+"%";
-    $("solarText").textContent=solar.toFixed(2)+" kW";
-    $("solarBar").style.width=(solar/3*100)+"%";
-    $("temperature").textContent=localTemp.toFixed(0)+" °C";
-    $("radiation").textContent=radiation.toFixed(2)+" µSv/h";
-    $("wind").textContent=wind+" m/s";
-    $("dustStatus").textContent=inStorm?"SEVERE":nearStorm?"ELEVATED":"CLEAR";
-    $("dustStatus").className=inStorm?"red":nearStorm?"amber":"cyan";
-    $("stormAlert").classList.toggle("show",nearStorm);
-    $("coords").textContent=`X ${player.x.toFixed(0)} · Z ${player.z.toFixed(0)}`;
-    $("roverDistance").textContent=distance.toFixed(0)+" m";
-    $("missionClock").textContent="MISSION ELAPSED "+fmtTime(mission.elapsed);
-    $("solTop").textContent=String(1+Math.floor(mission.elapsed/88775)).padStart(3,"0");
-    $("lifeState").textContent=mission.oxygen<=0?"O₂ LOW":"SIMULATION";
-    $("systemState").textContent=mission.oxygen<=0?"LIFE SUPPORT ALERT":"SYSTEM ONLINE";
-
-    // Minimap
-    const W=240,H=240,scale=W/620,mx=x=>(x+310)*scale,mz=z=>(z+310)*scale;
-    mapCtx.clearRect(0,0,W,H);mapCtx.fillStyle="#24150f";mapCtx.fillRect(0,0,W,H);
-    mapCtx.strokeStyle="rgba(105,234,255,.12)";mapCtx.lineWidth=1;
-    for(let i=0;i<=W;i+=30){mapCtx.beginPath();mapCtx.moveTo(i,0);mapCtx.lineTo(i,H);mapCtx.stroke();mapCtx.beginPath();mapCtx.moveTo(0,i);mapCtx.lineTo(W,i);mapCtx.stroke();}
-    mapCtx.fillStyle="rgba(255,75,60,.28)";mapCtx.beginPath();mapCtx.arc(mx(storm.x),mz(storm.z),storm.r*scale,0,Math.PI*2);mapCtx.fill();
-    mapCtx.strokeStyle="rgba(255,90,79,.8)";mapCtx.stroke();
-    mapCtx.fillStyle="#8ce6a0";mapCtx.beginPath();mapCtx.arc(mx(roverPos.x),mz(roverPos.z),4,0,Math.PI*2);mapCtx.fill();
-    mapCtx.save();mapCtx.translate(mx(player.x),mz(player.z));mapCtx.rotate(-player.yaw);
-    mapCtx.fillStyle="#fff";mapCtx.beginPath();mapCtx.moveTo(0,-8);mapCtx.lineTo(5,6);mapCtx.lineTo(-5,6);mapCtx.closePath();mapCtx.fill();mapCtx.restore();
-    if(mission.resourceUntil>now){
-      mapCtx.strokeStyle="#69eaff";mapCtx.setLineDash([4,4]);mapCtx.beginPath();mapCtx.arc(mx(65),mz(105),11,0,Math.PI*2);mapCtx.stroke();mapCtx.setLineDash([]);
-    }
-  }
-
-  // ---------- Modal modules ----------
-  const backdrop=$("modalBackdrop"),modalTitle=$("modalTitle"),modalContent=$("modalContent");
-  function openModal(title,html){modalTitle.textContent=title;modalContent.innerHTML=html;backdrop.classList.add("open");}
-  function closeModal(){backdrop.classList.remove("open");}
-  $("closeModal").addEventListener("click",closeModal);
-  backdrop.addEventListener("click",e=>{if(e.target===backdrop)closeModal();});
-  window.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
-
-  const database=[
-    ["Planetary profile","Mars is the fourth planet from the Sun. Its diameter is about 6,779 km and its surface area is approximately 144 million km².","A large range of terrain types makes landing-site selection a major engineering decision."],
-    ["Gravity and human health","Surface gravity is 3.71 m/s², approximately 0.38 Earth gravity. Mass does not change; weight does.","Long-term effects on muscle, bone, balance and cardiovascular health remain research questions."],
-    ["Time and seasons","A sol lasts 24 h 39 min 35 s. A Martian year lasts 687 Earth days. Axial tilt is about 25.2°.","Schedules, solar output, thermal loads and logistics must account for longer seasons."],
-    ["Atmosphere","The atmosphere is about 95% carbon dioxide, with nitrogen and argon as smaller components. Average pressure is around 6.4 mbar.","A habitat needs pressure control, reliable seals, oxygen supply and emergency reserves."],
-    ["Water resources","Water ice is present in polar regions and underground at some locations. Exposed liquid water is unstable under present surface conditions.","Local ice could support drinking water, hygiene, agriculture and potentially propellant after extraction and purification."],
-    ["Energy","Mars receives about 43% of Earth's top-of-atmosphere solar irradiance. Dust and seasons can further reduce solar generation.","Solar power benefits from storage and should be paired with a dependable backup such as fission power."],
-    ["Radiation and protection","Mars lacks a present-day global magnetic field comparable to Earth's, and its thin atmosphere provides limited shielding.","Habitats require shielding strategies, monitoring and carefully designed safe areas."],
-    ["Dust and weather","Mars experiences dust devils, regional and global dust storms, frost and clouds. Dust can persist on equipment.","Panels, seals, filters, radiators and moving machinery need maintenance plans."],
-    ["Regolith and chemistry","Surface materials include rocky deposits and loose regolith. Perchlorates have been detected in Martian soil.","Construction materials require testing; agricultural soil must be treated and isolated from contaminants."],
-    ["Communications and travel","One-way signal delay is roughly 3–22 minutes depending on planetary positions. Conventional journeys take several months.","Crews need autonomy, robust procedures and contingency supplies; favorable launch opportunities recur about every 26 months."],
-    ["Oxygen production","NASA's MOXIE experiment demonstrated oxygen production from Martian atmospheric CO₂ at a small experimental scale.","This is a technology demonstration, not proof of a settlement-scale operational oxygen plant."],
-    ["Moons","Mars has two small natural satellites: Phobos and Deimos.","They are potential scientific and future exploration targets."]
-  ];
-
-  function showDatabase(){
-    const cards=database.map((d,i)=>`<article class="data-card"><h3>${String(i+1).padStart(2,"0")} / ${d[0]}</h3><p>${d[1]}<br><br><strong>BASE IMPLICATION:</strong> ${d[2]}</p></article>`).join("");
-    openModal("MARS SCIENTIFIC DATABASE",`<input class="search" id="dbSearch" placeholder="Search planetary science, resources, hazards..." aria-label="Search database"><div class="modal-grid" id="dbCards">${cards}</div><p class="small-note" style="margin-top:12px">Reference summary based on the supplied research notes and commonly cited NASA Mars fact-sheet values. Figures are approximate and may vary by source or measurement context.</p>`);
-    $("dbSearch").addEventListener("input",e=>{
-      const q=e.target.value.toLowerCase();
-      [...$("dbCards").children].forEach((card,i)=>card.style.display=(database[i].join(" ").toLowerCase().includes(q)?"":"none"));
-    });
-  }
-
-  function showScan(){
-    addLog("Environmental scan completed at player coordinates.");
-    openModal("ENVIRONMENTAL SCAN",`<div class="modal-grid">
-      <article class="data-card"><h3>LOCAL CONDITIONS / SIMULATED</h3><p>Temperature: <strong>${$("temperature").textContent}</strong><br>Radiation indicator: <strong>${$("radiation").textContent}</strong><br>Wind estimate: <strong>${$("wind").textContent}</strong><br>Dust state: <strong>${$("dustStatus").textContent}</strong></p></article>
-      <article class="data-card"><h3>PLANETARY REFERENCE</h3><p>Mean surface temperature: <strong>−63 °C</strong><br>Mean pressure: <strong>~6.4 mbar</strong><br>Atmosphere: <strong>~95% CO₂</strong><br>Solar irradiance: <strong>~586 W/m²</strong></p></article>
-      <article class="data-card"><h3>MISSION ASSESSMENT</h3><p>${$("stormAlert").classList.contains("show")?"A dust hazard is within the monitored zone. Consider avoiding the marked area.":"No simulated dust hazard is currently near the explorer."}<br><br>Continue monitoring local conditions; these readings are generated by this prototype.</p></article>
-      <article class="data-card"><h3>DATA QUALITY</h3><p><strong>REFERENCE:</strong> published planetary facts.<br><strong>SIMULATED:</strong> local weather and radiation indicators.<br><strong>LIVE:</strong> no external live sensor feed connected.</p></article>
-    </div>`);
-  }
-
-  function showResources(){
-    mission.resourceUntil=performance.now()+30000;
-    addLog("Resource scan initiated; candidate ice/regolith markers displayed.");
-    openModal("RESOURCE SCANNER",`<div class="modal-grid">
-      <article class="data-card"><h3>WATER ICE / CANDIDATE</h3><p>Subsurface water ice is known in some Martian regions. This prototype marks a <strong>fictional candidate survey point</strong> on the minimap, not a confirmed deposit.</p></article>
-      <article class="data-card"><h3>REGOLITH / WIDESPREAD</h3><p>Loose surface material may be useful as construction feedstock after characterization and processing. Mechanical properties and local chemistry must be tested.</p></article>
-      <article class="data-card"><h3>ATMOSPHERIC CO₂</h3><p>Carbon dioxide is abundant in the atmosphere and may serve as feedstock for oxygen production and other industrial processes.</p></article>
-      <article class="data-card"><h3>SOIL CHEMISTRY</h3><p>Perchlorates have been detected in Martian soil. Material intended for agriculture or human contact requires careful testing and treatment.</p></article>
-    </div><p class="small-note" style="margin-top:12px">A cyan marker will appear on the local map for 30 seconds. It is a gameplay marker, not a mapped real-world resource location.</p>`);
-  }
-
-  function showRover(){
-    mission.followRover=!mission.followRover;
-    addLog(mission.followRover?"Rover tracking enabled.":"Rover tracking disabled.");
-    openModal("ROVER TELEMETRY",`<div class="modal-grid">
-      <article class="data-card"><h3>ROVER STATUS</h3><p>Telemetry link: <strong>LOCAL SIMULATION</strong><br>Position X: <strong>${roverPos.x.toFixed(1)} m</strong><br>Position Z: <strong>${roverPos.z.toFixed(1)} m</strong><br>Distance from explorer: <strong>${Math.hypot(player.x-roverPos.x,player.z-roverPos.z).toFixed(1)} m</strong></p></article>
-      <article class="data-card"><h3>NAVIGATION</h3><p>Rover marker is shown in green on the minimap. Tracking mode: <strong>${mission.followRover?"ACTIVE":"STANDBY"}</strong>.<br><br>Use the TRACK ROVER button to toggle camera guidance.</p></article>
-    </div>`);
-  }
-
-  function showAssistant(){
-    const stormNear=$("stormAlert").classList.contains("show");
-    const advice=stormNear
-      ?"A dust hazard is approaching the explorer. Avoid the marked red zone and monitor power availability; dust can reduce solar generation."
-      :"Environmental scan is nominal within this simplified simulation. Continue monitoring oxygen, power and local conditions. Mars surface conditions require pressurised habitats and radiation protection.";
-    openModal("M.A.R.S. / MISSION ASSISTANT",`<article class="data-card"><h3>MISSION STATUS SUMMARY</h3><p>${advice}</p></article>
-      <article class="data-card" style="margin-top:10px"><h3>SCIENTIFIC CONTEXT</h3><p>Mars has a thin CO₂-rich atmosphere and an average surface pressure far below Earth's. A human base would need a sealed, pressurised habitat, dependable life support, protected water systems and redundant power.</p></article>
-      <article class="data-card" style="margin-top:10px"><h3>RECENT SYSTEM LOG</h3><div class="log">${log.slice(0,8).map(x=>`<div>[${x.stamp}] ${x.message}</div>`).join("")}</div></article>
-      <p class="small-note" style="margin-top:10px">This is a rule-based interface assistant. It does not use a connected AI model or real spacecraft telemetry.</p>`);
-  }
-
-  $("btnScan").addEventListener("click",showScan);
-  $("btnResources").addEventListener("click",showResources);
-  $("btnRover").addEventListener("click",showRover);
-  $("btnDatabase").addEventListener("click",showDatabase);
-  $("btnAssistant").addEventListener("click",showAssistant);
-
-  // ---------- Animation loop ----------
-  let last=performance.now();
-  function animate(now){
-    requestAnimationFrame(animate);
-    const dt=Math.min(.05,(now-last)/1000);last=now;mission.elapsed+=dt;
-    const keys=player.keys;
-    const speed=(keys.ShiftLeft||keys.ShiftRight?13:5.5)*dt;
-    const forward={x:-Math.sin(player.yaw),z:-Math.cos(player.yaw)};
-    const right={x:Math.cos(player.yaw),z:-Math.sin(player.yaw)};
-    let mx=0,mz=0;
-    if(keys.KeyW||keys.ArrowUp){mx+=forward.x;mz+=forward.z;}
-    if(keys.KeyS||keys.ArrowDown){mx-=forward.x;mz-=forward.z;}
-    if(keys.KeyD||keys.ArrowRight){mx+=right.x;mz+=right.z;}
-    if(keys.KeyA||keys.ArrowLeft){mx-=right.x;mz-=right.z;}
-    const length=Math.hypot(mx,mz);
-    if(length>0){mx=mx/length*speed;mz=mz/length*speed;}
-    const nx=clamp(player.x+mx,-300,300),nz=clamp(player.z+mz,-300,300);
-    if(!collides(nx,player.z))player.x=nx;
-    if(!collides(player.x,nz))player.z=nz;
-
-    if(mission.followRover){
-      const targetYaw=Math.atan2(-(roverPos.x-player.x),-(roverPos.z-player.z));
-      let diff=((targetYaw-player.yaw+Math.PI*3)%(Math.PI*2))-Math.PI;
-      player.yaw+=diff*.035;
-    }
-    camera.position.set(player.x,heightAt(player.x,player.z)+1.8,player.z);
-    camera.rotation.set(player.pitch,player.yaw,0,"YXZ");
-
-    phobos.position.set(Math.cos(mission.elapsed*.018)*390,155,Math.sin(mission.elapsed*.018)*390-290);
-    deimos.position.set(Math.cos(mission.elapsed*.011+2)*490,220,Math.sin(mission.elapsed*.011+2)*490-290);
-    rover.position.set(roverPos.x,heightAt(roverPos.x,roverPos.z),roverPos.z);
-    rover.rotation.y=Math.sin(mission.elapsed*.08)*.12;
-    beacon.position.set(roverPos.x,heightAt(roverPos.x,roverPos.z)+17,roverPos.z);
-    roverPos.x+=Math.sin(mission.elapsed*.16)*.012;
-    roverPos.z+=Math.cos(mission.elapsed*.16)*.012;
-
-    stormParticles.children.forEach(p=>{
-      p.position.x+=p.userData.speed*dt;
-      p.position.y+=Math.sin(now*.001+p.position.z)*.006;
-      if(p.position.x>storm.x+storm.r)p.position.x=storm.x-storm.r;
-    });
-    stormRing.material.opacity=.12+Math.sin(now*.0015)*.035;
-    if(Math.floor(mission.elapsed)!==Math.floor(mission.elapsed-dt))updateHUD(dt,now);
-    renderer.render(scene,camera);
-  }
-  updateHUD(0,performance.now());
-  requestAnimationFrame(animate);
+(()=>{"use strict";
+const $=i=>document.getElementById(i),cl=(v,a,b)=>Math.max(a,Math.min(b,v)),lerp=(a,b,t)=>a+(b-a)*t,R=Math.random;
+const ft=s=>{s=Math.max(0,s|0);return[s/3600|0,s/60%60|0,s%60].map(v=>String(v).padStart(2,"0")).join(":")};
+const hAt=(x,z)=>Math.sin(x*.018)*Math.cos(z*.016)*8+Math.sin(x*.065+z*.045)*2.3+Math.cos(z*.105)*1.1+Math.sin(Math.hypot(x+65,z-35)*.035)*1.4;
+// ---- scene
+const cv=$("world"),rd=new THREE.WebGLRenderer({canvas:cv,antialias:true});rd.setPixelRatio(Math.min(devicePixelRatio||1,2));
+const sc=new THREE.Scene(),skyC=new THREE.Color(),fogC=new THREE.Color();sc.background=skyC;sc.fog=new THREE.FogExp2(0xb66f51,.0105);
+const cam=new THREE.PerspectiveCamera(72,1,.1,1800),hemi=new THREE.HemisphereLight(0xffd9bd,0x512414,1),sun=new THREE.DirectionalLight(0xffe8d2,1.25);sc.add(hemi,sun);
+const tg=new THREE.PlaneGeometry(620,620,140,140);tg.rotateX(-Math.PI/2);const P=tg.attributes.position,col=[];
+for(let i=0;i<P.count;i++){const y=hAt(P.getX(i),P.getZ(i));P.setY(i,y);const t=cl((y+13)/26,0,1),n=R()*.035;col.push(.43+t*.22+n,.16+t*.12+n,.085+t*.065)}
+tg.setAttribute("color",new THREE.Float32BufferAttribute(col,3));tg.computeVertexNormals();sc.add(new THREE.Mesh(tg,new THREE.MeshLambertMaterial({vertexColors:true})));
+const rocks=[],NR=190,rm=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1,0),new THREE.MeshLambertMaterial({color:0x74391f}),NR),d=new THREE.Object3D();
+for(let i=0;i<NR;i++){const x=(R()-.5)*580,z=(R()-.5)*580,s=.5+R()*2.2;d.position.set(x,hAt(x,z)+s*.25,z);d.scale.setScalar(s);d.rotation.set(R()*3,R()*3,R()*3);d.updateMatrix();rm.setMatrixAt(i,d.matrix);rocks.push({x,z,r:s*1.2})}
+sc.add(rm);
+for(let j=0;j<9;j++){const r=new THREE.Mesh(new THREE.ConeGeometry(24+R()*28,22+R()*30,5),new THREE.MeshLambertMaterial({color:0x7b3928}));r.position.set(-250+j*65,7,-245-R()*45);sc.add(r)}
+// stars
+const sg=new THREE.BufferGeometry(),sp=[];for(let i=0;i<1400;i++){const u=R()*2-1,a=R()*6.283,r=Math.sqrt(1-u*u);sp.push(r*Math.cos(a)*1500,Math.abs(u)*1500,r*Math.sin(a)*1500)}
+sg.setAttribute("position",new THREE.Float32BufferAttribute(sp,3));const sm=new THREE.PointsMaterial({color:0xffffff,size:2.2,sizeAttenuation:false,transparent:true,opacity:0,fog:false,depthWrite:false}),stars=new THREE.Points(sg,sm);sc.add(stars);
+// moons
+const phobos=new THREE.Mesh(new THREE.SphereGeometry(11,18,14),new THREE.MeshBasicMaterial({color:0x9b887b,fog:false}));phobos.scale.set(1.25,.85,1);
+const deimos=new THREE.Mesh(new THREE.SphereGeometry(6,16,12),new THREE.MeshBasicMaterial({color:0xb6a393,fog:false}));sc.add(phobos,deimos);
+// rover
+const rover=new THREE.Group(),lm=c=>new THREE.MeshLambertMaterial({color:c});
+const add=(g,c,x,y,z)=>{const m=new THREE.Mesh(g,lm(c));m.position.set(x,y,z);rover.add(m);return m};
+add(new THREE.BoxGeometry(3.2,1,4.3),0xd8d9d2,0,1.6,0);add(new THREE.BoxGeometry(2.2,.25,2.5),0x9da8a7,0,2.2,-.15);add(new THREE.CylinderGeometry(.09,.12,2,8),0xbac4c2,0,3.2,-1.1);add(new THREE.BoxGeometry(.7,.45,.55),0x253c47,0,4.1,-1.1);
+for(const x of[-1.75,1.75])for(const z of[-1.35,0,1.35]){const w=add(new THREE.CylinderGeometry(.58,.58,.35,12),0x242b2d,x,1,z);w.rotation.z=Math.PI/2}
+sc.add(rover);const rp={x:92,z:-72},bc=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,32,8),new THREE.MeshBasicMaterial({color:0x8ce6a0,transparent:true,opacity:.7}));sc.add(bc);
+const SURVEY={x:65,z:105};
+const sb=new THREE.Mesh(new THREE.CylinderGeometry(.15,.15,40,8),new THREE.MeshBasicMaterial({color:0x69eaff,transparent:true,opacity:.6}));sb.position.set(SURVEY.x,hAt(SURVEY.x,SURVEY.z)+20,SURVEY.z);sc.add(sb);
+// ---- storms (multi-system)
+const NAMES=["ARSIA","HELLAS","ACIDALIA","NOCTIS","CHRYSE","UTOPIA"],storms=[];let sn=0;
+function mkStorm(x,z){const s={name:NAMES[sn++%6]+"-"+(10+sn),x:x??(R()-.5)*500,z:z??(R()-.5)*500,r:45+R()*40,a:R()*6.283,v:1.5+R()*3,life:600+R()*600,sev:1+(R()*3|0)};
+ s.ring=new THREE.Mesh(new THREE.CylinderGeometry(1,1,35,40,1,true),new THREE.MeshBasicMaterial({color:0xff493c,transparent:true,opacity:.14,side:2,depthWrite:false}));sc.add(s.ring);
+ const g=new THREE.BufferGeometry(),a=[];for(let i=0;i<140;i++){const q=R()*6.283,r=Math.sqrt(R());a.push(Math.cos(q)*r,R()*28,Math.sin(q)*r)}
+ g.setAttribute("position",new THREE.Float32BufferAttribute(a,3));s.pts=new THREE.Points(g,new THREE.PointsMaterial({color:0xe5a17b,size:3.2,transparent:true,opacity:.5,depthWrite:false}));sc.add(s.pts);storms.push(s);return s}
+function killStorm(s){sc.remove(s.ring,s.pts);s.ring.geometry.dispose();s.pts.geometry.dispose();storms.splice(storms.indexOf(s),1)}
+mkStorm(-125,-135);mkStorm(150,120);
+// ---- player
+const pl={x:0,z:0,yaw:0,pitch:0,k:{},drag:null,vx:0,vz:0,vy:0,h:0,air:0};
+addEventListener("keydown",e=>{pl.k[e.code]=1;if(e.code=="KeyM"&&!e.repeat)toggleMap();if(e.key=='Escape')escKey();if(e.code.startsWith("Arrow")||e.code=="Space")e.preventDefault()});
+addEventListener("keyup",e=>pl.k[e.code]=0);
+cv.addEventListener("click",()=>{if(!("ontouchstart" in window)&&cv.requestPointerLock)cv.requestPointerLock()});
+cv.addEventListener("pointerdown",e=>{if(e.pointerType=="touch")pl.drag={x:e.clientX,y:e.clientY}});addEventListener("pointerup",()=>pl.drag=null);
+addEventListener("pointermove",e=>{if(document.pointerLockElement===cv){pl.yaw-=e.movementX*.0022;pl.pitch-=e.movementY*.0022}else if(pl.drag){pl.yaw-=(e.clientX-pl.drag.x)*.004;pl.pitch-=(e.clientY-pl.drag.y)*.004;pl.drag={x:e.clientX,y:e.clientY}}pl.pitch=cl(pl.pitch,-1.25,1.25)});
+const hit=(x,z)=>rocks.some(r=>(x-r.x)**2+(z-r.z)**2<(r.r+1.4)**2);
+const rs=()=>{rd.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()};addEventListener("resize",rs);rs();
+// ---- state
+const M={t:0,sim:450,spd:1,o2:28800,wat:82,bat:68,follow:false,resUntil:0,pts:0,flags:{},kd:{}},SPEEDS=[1,5,25,100];const G={paused:true,menu:true,started:false,sta:100,tired:false,spr:false,shake:0,dust:0,bobT:0,tut:0,tutDone:false,ach:{},disc:0,fd:0,fs:1,bt:0,at:0,upd(){$('hSt').style.width=G.sta+'%';$('hSt').style.background=G.tired?'var(--red)':'';$('dustov').style.opacity=cl(G.dust,0,.8);const T=[[rover.position,'ROVER',150],[sb.position,'RESOURCE DEPOSIT',160]],fw=new THREE.Vector3();cam.getWorldDirection(fw);let h=null;for(const t of T){const v=t[0].clone().sub(cam.position),dd=v.length();if(dd<t[2]&&v.normalize().dot(fw)>.992){h=t[1]+' · '+dd.toFixed(0)+' m';break}}$('xh').classList.toggle('t',!!h);$('xl').textContent=h||''}};const ST={get(){try{return JSON.parse(localStorage.getItem('mars2')||'null')}catch(e){return null}},set(o){try{localStorage.setItem('mars2',JSON.stringify(o))}catch(e){}},clr(){try{localStorage.removeItem('mars2')}catch(e){}}};const A={c:null,on:true,init(){try{if(!this.c){const c=this.c=new(window.AudioContext||window.webkitAudioContext)(),b=c.createBuffer(1,22050,22050),o=b.getChannelData(0);for(let i=0;i<o.length;i++)o[i]=R()*2-1;this.n=b}if(this.c.state=='suspended')this.c.resume()}catch(e){this.c=null}},nz(f,v,d,a=.01){const c=this.c;if(!c||!this.on)return;const s=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain(),t=c.currentTime;s.buffer=this.n;s.loop=true;fl.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+a);g.gain.linearRampToValueAtTime(0,t+d);s.connect(fl);fl.connect(g);g.connect(c.destination);s.start(t);s.stop(t+d+.05)},beep(f,d){const c=this.c;if(!c||!this.on)return;const o=c.createOscillator(),g=c.createGain(),t=c.currentTime;o.frequency.value=f;g.gain.setValueAtTime(.06,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+d)},thud(i){this.nz(260,.25+i,.6,.005)},step(r){this.nz(r?700:450,r?.09:.05,.12,.005)},breath(){this.nz(1100,.02,1.8,.8)}};const ND=150,dg=new THREE.BufferGeometry(),dp=new Float32Array(ND*3).fill(-999),dv=new Float32Array(ND*3),dl=new Float32Array(ND);dg.setAttribute('position',new THREE.BufferAttribute(dp,3));const dpt=new THREE.Points(dg,new THREE.PointsMaterial({color:0xc58a66,size:2.8,transparent:true,opacity:.55,depthWrite:false}));dpt.frustumCulled=false;sc.add(dpt);let di=0;const ring=new THREE.Mesh(new THREE.RingGeometry(.8,1,32).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xd9a27c,transparent:true,opacity:0,side:2,depthWrite:false}));ring.userData.t=9;sc.add(ring);function puff(x,z,n,p){const y=hAt(x,z)+.2;for(let i=0;i<n;i++){const j=di++%ND,a=R()*6.283,s=(.6+R())*p,k=j*3;dp[k]=x;dp[k+1]=y;dp[k+2]=z;dv[k]=Math.cos(a)*s;dv[k+1]=(.4+R())*p*.6;dv[k+2]=Math.sin(a)*s;dl[j]=1.2+R()}ring.position.set(x,y,z);ring.userData.t=0;ring.userData.p=p}function partUpd(dt){for(let j=0;j<ND;j++)if(dl[j]>0){dl[j]-=dt;const k=j*3;dp[k]+=dv[k]*dt;dp[k+1]+=dv[k+1]*dt;dp[k+2]+=dv[k+2]*dt;dv[k+1]-=3.71*dt*.6;dv[k]*=.985;dv[k+2]*=.985;if(dl[j]<=0)dp[k+1]=-999}dg.attributes.position.needsUpdate=true;const r=ring.userData;if(r.t<1.2){r.t+=dt;ring.scale.setScalar(1+r.t*r.p*5);ring.material.opacity=.5*Math.max(0,1-r.t/1.2)}else ring.material.opacity=0}function land(v){const i=cl((v-1.5)/4,0,1);puff(pl.x,pl.z,8+(i*50|0),1+i*3);G.shake=Math.max(G.shake,.04+i*.2);G.dust=cl(G.dust+.03+i*.1,0,1);A.thud(.15+i*.6)}const NF=160,fp=new THREE.InstancedMesh(new THREE.PlaneGeometry(.35,.6).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({polygonOffset:true,polygonOffsetFactor:-2}),NF),fa=new Float32Array(NF).fill(99),fx_=new Float32Array(NF),fz_=new Float32Array(NF),zm=new THREE.Matrix4().makeScale(0,0,0),dk1=new THREE.Color(.2,.08,.05),tc=new THREE.Color(.5,.25,.15),tmpC=new THREE.Color();for(let i=0;i<NF;i++){fp.setMatrixAt(i,zm);fp.setColorAt(i,tmpC)}fp.frustumCulled=false;sc.add(fp);let fi=0;function stamp(){const x=pl.x+Math.cos(pl.yaw)*.28*G.fs,z=pl.z-Math.sin(pl.yaw)*.28*G.fs;G.fs=-G.fs;d.position.set(x,hAt(x,z)+.04,z);d.rotation.set(0,pl.yaw,0);d.scale.set(1,1,1);d.updateMatrix();fp.setMatrixAt(fi,d.matrix);fa[fi]=0;fx_[fi]=x;fz_[fi]=z;fi=(fi+1)%NF;fp.instanceMatrix.needsUpdate=true}const stormAt=(x,z)=>storms.some(s=>Math.hypot(x-s.x,z-s.z)<s.r);function helmetUpd(dt,tmp,sol,st){$('hO').textContent=ft(M.o2);$('hB').textContent=M.bat.toFixed(0)+'%';$('hC').textContent=M.flags.com>M.sim?'DELAY':'OK';$('hS').textContent=sol.toFixed(1)+'kW';$('hT').textContent=tmp.toFixed(0)+'°C';$('hSol').textContent=$('sol').textContent;$('hM').textContent=st;for(let i=0;i<NF;i++){if(fa[i]>=90)continue;fa[i]+=dt*(stormAt(fx_[i],fz_[i])?7:1);if(fa[i]>=90)fp.setMatrixAt(i,zm);else fp.setColorAt(i,tmpC.copy(dk1).lerp(tc,fa[i]/90))}fp.instanceMatrix.needsUpdate=true;if(fp.instanceColor)fp.instanceColor.needsUpdate=true;G.bt+=dt;if(G.bt>4){G.bt=0;A.breath()}G.at+=dt;if(G.at>15){G.at=0;saveGame()}}const TUT=['Press W (or use the joystick) to move','Press SPACE to jump — gravity is only 3.71 m/s²','Open the scanner: ENV SCAN','Travel to the cyan beacon'];function tutShow(){const t=$('tut');if(G.tutDone){t.style.display='none';return}t.style.display='block';t.textContent='MISSION BRIEFING '+(G.tut+1)+'/4 — '+TUT[G.tut]}function tutAdv(n){if(G.tutDone||G.tut!==n)return;G.tut++;if(G.tut>=4){G.tutDone=true;const t=$('tut');t.textContent='TUTORIAL COMPLETE — MISSION AUTHORIZED';setTimeout(()=>t.style.display='none',3500);ev('Tutorial complete. Mission authorized.');M.pts+=50}else tutShow()}
+const obj=[["Reach survey zone",0],["Scan surface",0],["Analyze deposit",0],["Return data to rover",0]];
+const tlEl=$("tl"),opsEl=$("ops");
+function ev(msg,cls='',tl=true){if(cls&&G.started){A.beep(cls=='c'?660:880,.25);A.nz(3000,.03,.5)}const s="T+"+ft(M.t).slice(0,5),mk=(el,t)=>{const r=document.createElement("div");r.className=cls;r.textContent=t;el.prepend(r);while(el.children.length>30)el.lastChild.remove()};
+ if(tl)mk(tlEl,s+" "+msg);mk(opsEl,"["+ft(M.t)+"] "+msg.toUpperCase())}
+["Landing","System online","Environment scan complete","Communication link active","Rover tracking enabled"].forEach((m,i)=>{M.t=i*35;ev(m,"",i<2||i==4)});M.t=0;
+const done=i=>{if(!obj[i][1]){obj[i][1]=1;M.pts+=100;ev("Objective complete: "+obj[i][0],"");if(obj.every(o=>o[1])){M.pts+=250;ev("MISSION 01 COMPLETE — new regions unlocked","w")}}};
+// ---- data
+const SITES=`Viking 1|NASA|1976-07-20|Chryse Planitia|22.5|-48|First successful Mars lander; long-duration surface weather and imaging, biology experiments.
+Viking 2|NASA|1976-09-03|Utopia Planitia|47.7|134.3|Returned images of frost and ran biology tests; orbiter mapped candidate sites.
+Pathfinder|NASA|1997-07-04|Ares Vallis|19.1|-33.2|Airbag landing with Sojourner, the first rover on Mars.
+Spirit|NASA|2004-01-04|Gusev Crater|-14.6|175.5|MER-A; found evidence of past water-altered rocks and silica-rich soil.
+Opportunity|NASA|2004-01-25|Meridiani Planum|-2|-5.5|MER-B; found hematite concretions and sulfate rocks formed in water; operated ~14 years.
+Phoenix|NASA|2008-05-25|Vastitas Borealis|68.2|-125.7|Dug into the arctic soil and confirmed shallow water ice; detected perchlorate.
+Curiosity|NASA|2012-08-06|Gale Crater|-4.6|137.4|Found an ancient habitable lake environment at Yellowknife Bay; climbing Mount Sharp.
+InSight|NASA|2018-11-26|Elysium Planitia|4.5|135.6|Seismometer recorded marsquakes and probed the crust, mantle and core.
+Perseverance|NASA|2021-02-18|Jezero Crater|18.4|77.5|Astrobiology rover caching samples in an ancient river delta; flew Ingenuity helicopter.
+Zhurong|CNSA|2021-05-14|Utopia Planitia|25.1|109.9|China's first Mars rover; surveyed dunes and possible hydrated minerals.`.split("\n").map(l=>l.split("|"));
+const SPOTS=`Jezero Crater|18.4|77.5|Ancient lake basin with a river delta.|Delta sediments, carbonates, clays.|Perseverance sample caching for Mars Sample Return.|Organic-bearing mudstones and delta deposits.
+Gale Crater|-5.4|137.8|150 km crater with a 5 km central mound (Mount Sharp).|Layered sulfates and clays recording climate change.|Curiosity's field site.|Habitable lake environment and organic molecules.
+Valles Marineris|-14|-59|Canyon system over 4,000 km long.|Exposed layered crust, tectonic rifting.|Target for hydrated minerals and sediment studies.|Seen from orbit; layered sulfate deposits.
+Olympus Mons|18.65|-133.8|Tallest known volcano in the Solar System (~22 km).|Basaltic shield volcano.|Probes volcanic history and interior heat.|Orbiter altimetry and imaging.
+Arcadia Planitia|47|-170|Smooth northern lowland plain.|Young lava and sediment cover.|Candidate for shallow ice.|Mid-latitude ice exposed in fresh craters.
+Elysium Planitia|3|147|Volcanic plain with Elysium Mons.|Lava plains with recent marsquake activity.|InSight landed here.|Marsquakes and Cerberus Fossae activity.
+Polar Ice Caps|90|0|Layered deposits of water ice and CO₂ frost.|Layered ice recording climate cycles.|Water and climate archive.|Radar sounding detected thick ice layers.`.split("\n").map(l=>l.split("|"));
+const MOONS=[["Phobos","9,376 km (orbit radius)","7 h 39 min","22.2 km","2.14 km/s",.018,390,155,"Heavily cratered, spiraling slowly inward toward Mars."],["Deimos","23,463 km (orbit radius)","30 h 18 min","12.4 km","1.35 km/s",.011,490,220,"Smoother surface; slowly drifting outward."]];
+const ORBS=[["Mars Reconnaissance Orbiter","NASA · 2006","High-resolution imaging (HiRISE), subsurface radar, climate monitoring."],["MAVEN","NASA · 2014","Studies upper atmosphere and loss of gas to space."],["Mars Odyssey","NASA · 2001","Longest-serving Mars orbiter; THEMIS mapping, detected hydrogen (ice) signatures; relay for rovers."],["ExoMars Trace Gas Orbiter","ESA/Roscosmos · 2016","Measures trace gases such as methane; relay for rovers."]];
+// ---- layers
+const LY=["SURF","ELEV","AGE","MINERAL","TEMP","ICE","RAD"],LL={SURF:"Current terrain",ELEV:"Elevation: blue low → red high",AGE:"■ ancient crust ■ volcanic ■ impact ■ sedimentary",MINERAL:"■ iron oxide ■ basalt ■ silicate ■ sulfate ■ ice-rich",TEMP:"Blue cold → red warm (modelled day average)",ICE:"Blue/green → red: subsurface ice potential and extraction suitability",RAD:"■ safe ■ moderate ■ elevated ■ hazardous (altitude shielding model)"};
+let layer="SURF";const cache={};
+const ramp=t=>t<.25?[40,90+t*4*140,230]:t<.5?[40,230,230-(t-.25)*4*190]:t<.75?[230,230-(t-.5)*4*100,40]:[230,130-(t-.75)*4*90,40];
+const AGEC=[[120,95,170],[210,90,50],[200,200,210],[220,180,90]],MINC=[[190,70,40],[90,90,100],[170,140,200],[230,220,100],[120,200,240]];
+function info(x,z){const h=hAt(x,z),cr=Math.hypot(x+65,z-35)<45,age=cr?2:h>5?1:h<-4?3:0,k=Math.sin(x*.05)+Math.cos(z*.04),ice=z<-150&&h<0,min=ice?4:k>.6?3:k>0?0:k>-.6?1:2,iceP=cl((-z/310)*.7+(h<0?.25:0)+(ice?.2:0),0,1),rad=cl(.75-(h+13)/26*.6+(z<-200?.1:0)+.15*Math.abs(Math.sin(x*.03)),0,1),temp=cl(.62-z/800-h/70,0,1);
+ return{h,age,min,iceP,rad,temp}}
+const AGEN=["Ancient crust (Noachian)","Volcanic terrain (Hesperian)","Impact terrain","Sedimentary region"],MINN=["Iron oxides","Basalt","Silicates","Sulfates","Ice-rich deposits"],AGEY=["~3.9–4.1 Gyr","~3.0–3.7 Gyr","~3.5 Gyr (varies)","~3.0–3.8 Gyr"];
+function paint(m){if(cache[m])return cache[m];const c=document.createElement("canvas");c.width=c.height=80;const g=c.getContext("2d"),im=g.createImageData(80,80);
+ for(let j=0;j<80;j++)for(let i=0;i<80;i++){const x=i/80*620-310,z=j/80*620-310,f=info(x,z);let rgb;
+  if(m=="SURF"){const t=cl((f.h+13)/26,0,1);rgb=[110+t*60,40+t*40,22+t*25]}else if(m=="ELEV")rgb=ramp(cl((f.h+13)/26,0,1));
+  else if(m=="AGE")rgb=AGEC[f.age];else if(m=="MINERAL")rgb=MINC[f.min];else if(m=="TEMP")rgb=ramp(f.temp);else if(m=="ICE")rgb=ramp(1-f.iceP);
+  else rgb=f.rad<.3?[60,200,110]:f.rad<.5?[230,220,60]:f.rad<.7?[240,140,40]:[230,60,50];
+  const k=(j*80+i)*4;im.data[k]=rgb[0];im.data[k+1]=rgb[1];im.data[k+2]=rgb[2];im.data[k+3]=255}
+ g.putImageData(im,0,0);return cache[m]=c}
+const lt=$("lt");LY.forEach(l=>{const b=document.createElement("button");b.textContent=l;b.onclick=()=>{layer=l;[...lt.children].forEach(x=>x.classList.toggle("on",x==b));$("lyr").textContent=l;$("leg").textContent=LL[l]};b.className=l=="SURF"?"on":"";lt.append(b)});$("leg").textContent=LL.SURF;
+const mm=$("mm"),mg=mm.getContext("2d");mg.imageSmoothingEnabled=true;
+mm.addEventListener("click",e=>{const r=mm.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*620-310,z=(e.clientY-r.top)/r.height*620-310,f=info(x,z);
+ openM("TERRAIN SURVEY · X "+x.toFixed(0)+" Z "+z.toFixed(0),`<div class="g"><div class="card"><h3>GEOLOGICAL AGE</h3>${AGEN[f.age]}<br><strong>${AGEY[f.age]}</strong></div><div class="card"><h3>COMPOSITION</h3>${MINN[f.min]}<br>Elevation: <strong>${f.h.toFixed(1)} m (relative)</strong></div><div class="card"><h3>RESOURCE POTENTIAL</h3>Ice: <strong>${(f.iceP*100|0)}%</strong> · Radiation class: <strong>${["SAFE","MODERATE","ELEVATED","HAZARDOUS"][f.rad<.3?0:f.rad<.5?1:f.rad<.7?2:3]}</strong></div><div class="card"><h3>SCIENTIFIC IMPORTANCE</h3>${f.age==2?"Impact exposes deeper crust.":f.min==3?"Sulfates indicate past water chemistry.":f.min==4?"Priority for water-ice study.":"Context terrain for regional geology."}</div></div><p class="note" style="margin-top:8px">Simulated terrain; classifications are illustrative.</p>`);if(Math.hypot(x-SURVEY.x,z-SURVEY.z)<25)ev("Survey data logged at candidate zone")});
+// ---- modal
+const mb=$("mb");function openM(t,h){$("mt").textContent=t;$("mc").innerHTML=h;mb.classList.add("open")}function closeM(){mb.classList.remove("open")}
+$("mx").onclick=closeM;mb.onclick=e=>{if(e.target==mb)closeM()};
+const card=(h,p,k)=>`<div class="card ${k?"k":""}" ${k?`data-k="${k}"`:""}><h3>${h}</h3>${p}</div>`;
+function sites(){openM("LANDING SITES",`<div class="g">${SITES.map((s,i)=>card(s[0].toUpperCase()+" · "+s[1],`<strong>${s[2]}</strong> · ${s[3]}<br>${s[4]}°, ${s[5]}°E<br>${s[6]}`,i)).join("")}</div><p class="note" style="margin-top:8px">Coordinates approximate. Rover trajectories and 3D beacons are not yet included in this build.</p>`)}
+function db(){openM("MARS DATABASE",`<div class="g">${SPOTS.map(s=>card(s[0].toUpperCase(),`<strong>Description:</strong> ${s[3]}<br><strong>Geology:</strong> ${s[4]}<br><strong>Relevance:</strong> ${s[5]}<br><strong>Discoveries:</strong> ${s[6]}`)).join("")}</div>`)}
+function orbits(){openM("MOONS & ORBITERS",`<div class="g">${MOONS.map(m=>card(m[0].toUpperCase(),`Distance: <strong>${m[1]}</strong><br>Period: <strong>${m[2]}</strong><br>Diameter: <strong>${m[3]}</strong><br>Velocity: <strong>${m[4]}</strong><br>${m[8]}`)).join("")}${ORBS.map(o=>card(o[0].toUpperCase(),`<strong>${o[1]}</strong><br>${o[2]}`)).join("")}</div><p class="note" style="margin-top:8px">Orbit paths and ground tracks are not yet drawn in this build.</p>`)}
+mb.addEventListener("click",e=>{const c=e.target.closest("[data-k]");if(c&&c.parentElement.parentElement.id=="mc"){const s=SITES[c.dataset.k];if(s)ev("Site selected: "+s[0])}});
+// global map
+const D2R=Math.PI/180;
+function gmap(){openM("GLOBAL MARS MAP",`<canvas id="gmap" width="720" height="360"></canvas><div id="gi" class="note" style="margin-top:8px;font-size:11px">Click a marker. Cyan = landing sites, amber = science hotspots. Dark band = night side.</div>`);const c=$("gmap"),g=c.getContext("2d"),W=720,H=360,px=l=>(l+180)/360*W,py=l=>(90-l)/180*H;
+ const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,"#d8d4d0");gr.addColorStop(.12,"#a8553a");gr.addColorStop(.88,"#a8553a");gr.addColorStop(1,"#d8d4d0");g.fillStyle=gr;g.fillRect(0,0,W,H);
+ g.strokeStyle="rgba(0,0,0,.2)";for(let i=0;i<=360;i+=30){g.beginPath();g.moveTo(px(i-180),0);g.lineTo(px(i-180),H);g.stroke()}for(let i=-60;i<=60;i+=30){g.beginPath();g.moveTo(0,py(i));g.lineTo(W,py(i));g.stroke()}
+ const sl=((.25-(M.sim/1800)%1)*360+360)%360-180;for(let l=-180;l<180;l+=2){const dl=((l-sl+540)%360)-180;if(Math.abs(dl)>90){g.fillStyle="rgba(0,5,15,.55)";g.fillRect(px(l),0,W/180+1,H)}}
+ const pts=[...SITES.map(s=>[+s[4],+s[5],s[0],"#69eaff",s[6]]),...SPOTS.map(s=>[+s[1],+s[2],s[0],"#ffb45c",s[3]+" "+s[5]])];
+ pts.forEach(p=>{g.fillStyle=p[3];g.beginPath();g.arc(px(p[2]=="x"?0:p[1]),py(p[0]),4,0,7);g.fill();g.fillStyle="#fff";g.font="9px Arial";g.fillText(p[2],px(p[1])+6,py(p[0])+3)});
+ c.onclick=e=>{const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;let b=null,bd=18;pts.forEach(p=>{const q=Math.hypot(px(p[1])-x,py(p[0])-y);if(q<bd){bd=q;b=p}});if(b)$("gi").innerHTML="<strong style='color:#69eaff'>"+b[2]+"</strong> ("+b[0]+"°, "+b[1]+"°E)<br>"+b[4]}}
+let gOpen=false;function toggleMap(){if(mb.classList.contains("open"))return closeM();gmap()}
+// moons click
+$("mn").onclick=e=>{const i=e.target.closest("[data-m]");if(i){const m=MOONS[i.dataset.m];openM(m[0].toUpperCase(),`<div class="g">${card("ORBIT",`Distance: <strong>${m[1]}</strong><br>Period: <strong>${m[2]}</strong><br>Velocity: <strong>${m[4]}</strong>`)}${card("BODY",`Diameter: <strong>${m[3]}</strong><br>${m[8]}`)}</div>`)}};
+// ---- buttons
+$("bScan").onclick=()=>{tutAdv(2);done(1);ev("Environment scan complete");openM("ENVIRONMENT SCAN",`<div class="g">${card("LOCAL / SIMULATED",`Temp <strong>${$("tmp").textContent}</strong><br>Radiation <strong>${$("rad").textContent}</strong><br>Visibility <strong>${$("vis").textContent}</strong><br>Dust <strong>${$("dust").textContent}</strong>`)}${card("ASSESSMENT",storms.some(s=>Math.hypot(pl.x-s.x,pl.z-s.z)<s.r+40)?"Dust hazard within monitored zone.":"No storm near the explorer.")}</div>`)};
+$("bRes").onclick=()=>{M.resUntil=performance.now()+30000;done(2);ev("Resource signature detected","w");openM("RESOURCE SCAN",`<div class="g">${card("WATER ICE","Candidate survey point (cyan) on the minimap and in the 3D view. Fictional deposit; real Mars has shallow ice at mid/high latitudes.")}${card("REGOLITH","Construction feedstock after characterization; contains perchlorates.")}</div>`)};
+$("bRov").onclick=()=>{M.follow=!M.follow;ev(M.follow?"Rover tracking enabled":"Rover tracking disabled")};
+$("bSites").onclick=sites;$("bMap").onclick=gmap;$("bOrb").onclick=orbits;$("bDb").onclick=db;
+$("bTime").onclick=e=>{M.spd=SPEEDS[(SPEEDS.indexOf(M.spd)+1)%4];e.target.textContent="TIME ×"+M.spd};
+$("bAI").onclick=()=>{const f=info(pl.x,pl.z),sl=Math.abs(hAt(pl.x+3,pl.z)-hAt(pl.x-3,pl.z))/6,ns=storms.map(s=>[Math.hypot(pl.x-s.x,pl.z-s.z)-s.r,s]).sort((a,b)=>a[0]-b[0])[0],hs=Math.hypot(pl.x-SURVEY.x,pl.z-SURVEY.z);
+ const ty=f.age==2?"Impact crater terrain":sl>.25?"Rugged slope / ridge":f.age==1?"Volcanic upland":f.age==3?"Basin / sedimentary plain":"Ancient cratered plain";
+ openM("MISSION AI · TERRAIN ANALYSIS",`<div class="g">${card("TERRAIN",`<strong>${ty}</strong><br>Slope ≈ ${(Math.atan(sl)/D2R).toFixed(0)}°`)}${card("ORIGIN & AGE",`${AGEN[f.age]}<br>${AGEY[f.age]} (estimate)`)}${card("RESOURCES",`${MINN[f.min]} · ice potential ${(f.iceP*100|0)}%`)}${card("RECOMMENDATION",`${obj[0][1]?"Survey zone reached.":"Proceed to survey beacon "+hs.toFixed(0)+" m away."}<br>Nearest storm edge: ${ns[0].toFixed(0)} m (${ns[1].name}).${ns[0]<60?" <strong style='color:#ff5a4f'>Avoid — reroute away.</strong>":" Route is clear."}`)}</div><p class="note" style="margin-top:8px">Rule-based assistant; no connected AI model.</p>`)};
+// ---- random events
+const EVS=[["Dust storm formation",()=>{const s=mkStorm();ev("Dust storm "+s.name+" forming","w")}],["Meteor impact detected",()=>{ev("Meteor impact detected 40 km away","w")}],["Solar flare",()=>{M.flags.rad=M.sim+300;ev("Solar flare — radiation elevated","c")}],["Power failure",()=>{M.flags.pow=M.sim+240;ev("Power failure — array offline","c")}],["Communications delay",()=>{M.flags.com=M.sim+300;ev("Communications delay","w")}],["Rover anomaly",()=>{M.flags.rov=M.sim+200;ev("Rover anomaly — holding position","w")}],["Radiation alert",()=>{M.flags.rad=M.sim+200;ev("Radiation alert","c")}]];
+let nextEv=40;
+// ---- loop
+function saveGame(){if(!G.started)return;ST.set({x:pl.x,z:pl.z,yaw:pl.yaw,o2:M.o2,bat:M.bat,wat:M.wat,sim:M.sim,t:M.t,pts:M.pts,obj:obj.map(o=>o[1]),tut:G.tutDone,snd:A.on})}function startGame(load){const s=load?ST.get():null;if(!load)ST.clr();Object.assign(pl,{x:0,z:0,yaw:0,pitch:0,vx:0,vz:0,vy:0,h:0,air:0});M.o2=28800;M.bat=68;M.wat=82;M.sim=450;M.t=0;M.pts=0;obj.forEach(o=>o[1]=0);G.tut=0;G.tutDone=false;G.sta=100;G.dust=0;if(s){pl.x=s.x;pl.z=s.z;pl.yaw=s.yaw;M.o2=s.o2;M.bat=s.bat;M.wat=s.wat;M.sim=s.sim;M.t=s.t;M.pts=s.pts;s.obj.forEach((v,i)=>obj[i][1]=v);G.tutDone=!!s.tut;A.on=s.snd!==false}G.started=true;G.menu=false;G.paused=false;$('menu').classList.add('off');A.init();tutShow();ev(load?'Mission resumed':'New mission started');if(!('ontouchstart' in window)&&cv.requestPointerLock)cv.requestPointerLock()}function resume(){G.paused=false;G.menu=false;$('menu').classList.add('off');if(!('ontouchstart' in window)&&cv.requestPointerLock)cv.requestPointerLock()}function escKey(){if(mb.classList.contains('open'))return closeM();if(!G.started)return;if(G.menu)resume();else showMenu('pause')}const objs=()=>openM('OBJECTIVES',`<div class='card'><h3>MISSION 01 · WATER EVIDENCE · ${M.pts} PTS</h3>${obj.map(o=>(o[1]?'☑ ':'☐ ')+o[0]).join('<br>')}</div>`),missions=()=>openM('MISSIONS',`<div class='g'>${card('MISSION 01 · WATER EVIDENCE','Available: reach the survey zone, scan, analyze, return data.')}${card('MISSION 02 · ROVER RECOVERY','LOCKED — complete Mission 01.')}${card('MISSION 03 · HABITAT SITE SURVEY','LOCKED')}${card('MISSION 04 · STORM WATCH','LOCKED')}</div>`),credits=()=>openM('CREDITS',`<div class='card'>M.A.R.S. Explorer · Three.js. Mars reference data from public NASA/ESA/CNSA sources; terrain and weather are simulated.</div>`),ex=()=>openM('EXIT',`<div class='card'>Close this tab to exit. Progress autosaves in this browser.</div>`),sets=()=>{openM('SETTINGS',`<div class='g'>${card('AUDIO',`<button id='sSnd'>${A.on?'SOUND: ON':'SOUND: OFF'}</button>`)}${card('SAVE DATA',`<button id='sClr'>DELETE SAVE</button>`)}</div>`);$('sSnd').onclick=e=>{A.on=!A.on;e.target.textContent=A.on?'SOUND: ON':'SOUND: OFF';saveGame()};$('sClr').onclick=e=>{ST.clr();e.target.textContent='DELETED'}};function showMenu(m){G.paused=true;G.menu=true;$('menu').classList.remove('off');const p=m=='pause',has=!!ST.get(),it=p?[['RESUME',resume],['OBJECTIVES',objs],['DATABASE',db],['SETTINGS',sets],['RESTART',()=>startGame(false)],['MAIN MENU',()=>{saveGame();G.started=false;showMenu('main')}],['EXIT',ex]]:[['NEW GAME',()=>startGame(false)],['CONTINUE',()=>startGame(true),!has],['MISSIONS',missions],['DATABASE',db],['SETTINGS',sets],['CREDITS',credits],['EXIT',ex]];$('msub').textContent=p?'PAUSED · SIMULATION HALTED':'EXPLORER · MARS OPERATIONS & RESEARCH SIMULATOR';$('globe').style.display=p?'none':'';const b=$('mbtn');b.innerHTML='';it.forEach(i=>{const e=document.createElement('button');e.textContent=i[0];e.disabled=!!i[2];e.onclick=i[1];b.append(e)});if(p)saveGame()}document.querySelectorAll('.pt').forEach(t=>t.onclick=()=>t.parentElement.classList.toggle('c'));document.querySelectorAll('.col .panel').forEach(p=>{if(!p.querySelector('#mm,#obj'))p.classList.add('c')});if('ontouchstart' in window)document.body.classList.add('touch');const J=pl.joy={x:0,y:0},jo=$('joy');let ja=null;const jm=e=>{const r=jo.getBoundingClientRect();let x=(e.clientX-r.left-52)/40,y=(e.clientY-r.top-52)/40;const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}J.x=x;J.y=y;jo.firstChild.style.transform=`translate(${x*30}px,${y*30}px)`},je=()=>{ja=null;J.x=J.y=0;jo.firstChild.style.transform=''};jo.addEventListener('pointerdown',e=>{ja=e.pointerId;jo.setPointerCapture(ja);jm(e)});jo.addEventListener('pointermove',e=>{if(e.pointerId===ja)jm(e)});jo.addEventListener('pointerup',je);jo.addEventListener('pointercancel',je);$('jb').addEventListener('pointerdown',()=>{pl.k.Space=1;setTimeout(()=>pl.k.Space=0,120)});showMenu('main');const sk={night:new THREE.Color(0x04070d),day:new THREE.Color(0xb66f51),dusk:new THREE.Color(0xe08a4a)};
+let last=performance.now(),acc=0,mapAcc=0,sim0=0;
+function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000);last=now;if(G.paused){if(G.menu&&!G.started){pl.yaw+=dt*.05;cam.position.set(pl.x,hAt(pl.x,pl.z)+3,pl.z);cam.rotation.set(-.05,pl.yaw,0,'YXZ')}rd.render(sc,cam);return}M.t+=dt;M.sim+=dt*M.spd;acc+=dt;mapAcc+=dt;
+ const k=pl.k,sprint=(k.ShiftLeft||k.ShiftRight)&&G.sta>3&&!G.tired,sp=sprint?12:5.5,fx=-Math.sin(pl.yaw),fz=-Math.cos(pl.yaw),rx=Math.cos(pl.yaw),rz=-Math.sin(pl.yaw);let mx=0,mz=0;
+ if(k.KeyW||k.ArrowUp){mx+=fx;mz+=fz}if(k.KeyS||k.ArrowDown){mx-=fx;mz-=fz}if(k.KeyD||k.ArrowRight){mx+=rx;mz+=rz}if(k.KeyA||k.ArrowLeft){mx-=rx;mz-=rz}
+ const jx=pl.joy;if(jx&&(jx.x||jx.y)){mx+=rx*jx.x-fx*jx.y;mz+=rz*jx.x-fz*jx.y}const L=Math.hypot(mx,mz);if(L>.01)tutAdv(0);const tx=L?mx/L*sp:0,tz=L?mz/L*sp:0,ac=cl(dt*(pl.air?.8:L?6:4),0,1);pl.vx+=(tx-pl.vx)*ac;pl.vz+=(tz-pl.vz)*ac;G.spr=!!(sprint&&L&&!pl.air);G.sta=cl(G.sta+(G.spr?-16:9)*dt,0,100);if(G.sta<=0)G.tired=true;else if(G.sta>30)G.tired=false;if(k.Space&&!pl.air){pl.vy=4.4;pl.air=1;tutAdv(1)}if(pl.air){pl.vy-=3.71*dt;pl.h+=pl.vy*dt;if(pl.h<=0){const v=-pl.vy;pl.h=0;pl.vy=0;pl.air=0;if(v>1.3)land(v)}}const nx=cl(pl.x+pl.vx*dt,-300,300),nz=cl(pl.z+pl.vz*dt,-300,300);if(!hit(nx,pl.z))pl.x=nx;if(!hit(pl.x,nz))pl.z=nz;
+ if(!pl.air){const vs=Math.hypot(pl.vx,pl.vz);if(vs>.8){G.fd+=vs*dt;if(G.fd>(G.spr?2.2:1.5)){G.fd=0;stamp();A.step(G.spr)}}}partUpd(dt);if(M.follow){let df=((Math.atan2(-(rp.x-pl.x),-(rp.z-pl.z))-pl.yaw+9.4247)%6.2832)-3.1416;pl.yaw+=df*.035}
+ const vs2=Math.hypot(pl.vx,pl.vz);G.bobT+=dt*(vs2>.5?vs2*1.3:1.1);const mv=!pl.air&&vs2>.5,bob=pl.air?0:mv?Math.sin(G.bobT*2)*(G.spr?.1:.045):Math.sin(G.bobT)*.012,sw=mv?Math.cos(G.bobT)*(G.spr?.012:.005):0;G.shake=Math.max(0,G.shake-dt*.6);const sh=G.shake*(R()-.5);cam.position.set(pl.x+sh,hAt(pl.x,pl.z)+1.8+pl.h+bob+sh,pl.z);cam.rotation.set(pl.pitch+sh*.3,pl.yaw,sw,'YXZ');const vz2=$('visor');if(G.shake>.01||G.spr){const a=G.shake*30+(G.spr?1.5:0);vz2.style.transform=`translate(${(R()-.5)*a}px,${(R()-.5)*a}px)`}else if(vz2.style.transform)vz2.style.transform='';
+ // day/night
+ const a=((M.sim/1800)%1)*6.2832,se=Math.sin(a),dk=cl(se*3+.35,0,1),gl=cl(1-Math.abs(se)*4,0,1)*(se>-.25?1:0);
+ sun.position.set(Math.cos(a)*150,Math.sin(a)*150+5,60);sun.intensity=1.25*cl(se*3,0,1)+.03;hemi.intensity=.12+.88*dk;
+ skyC.copy(sk.night).lerp(sk.day,dk).lerp(sk.dusk,gl*.6);sc.fog.color.copy(skyC);
+ let haze=0;storms.forEach(s=>{const q=Math.hypot(pl.x-s.x,pl.z-s.z);if(q<s.r*1.5)haze=Math.max(haze,(1-q/(s.r*1.5))*s.sev*.003)});
+ sc.fog.density=.0085+haze+(1-dk)*.002;sm.opacity=cl(1-dk*1.6,0,1);stars.position.copy(cam.position);
+ // storms
+ for(let i=storms.length-1;i>=0;i--){const s=storms[i],ds=dt*M.spd*.2;s.x+=Math.cos(s.a)*s.v*ds;s.z+=Math.sin(s.a)*s.v*ds;s.life-=dt*M.spd*.2;if(s.life<=0||Math.abs(s.x)>420||Math.abs(s.z)>420){killStorm(s);continue}
+  s.ring.scale.set(s.r,1,s.r);s.ring.position.set(s.x,hAt(cl(s.x,-300,300),cl(s.z,-300,300))+18,s.z);s.pts.scale.set(s.r*2,1,s.r*2);s.pts.position.set(s.x,hAt(cl(s.x,-300,300),cl(s.z,-300,300)),s.z);s.pts.rotation.y+=dt*.15*s.sev;s.ring.material.opacity=.1+Math.sin(now*.0015)*.03}
+ while(storms.length<2)mkStorm();
+ // moons
+ MOONS.forEach((m,i)=>{const o=i?deimos:phobos,t=M.sim*m[5]*(i?1:1)+i*2;o.position.set(cam.position.x+Math.cos(t)*m[6],m[7],cam.position.z+Math.sin(t)*m[6]-290)});
+ if(!M.flags.rov){rp.x+=Math.sin(M.t*.16)*.012;rp.z+=Math.cos(M.t*.16)*.012}
+ const rh=hAt(rp.x,rp.z);rover.position.set(rp.x,rh,rp.z);rover.rotation.y=Math.sin(M.t*.08)*.12;bc.position.set(rp.x,rh+17,rp.z);
+ if(M.t>nextEv){nextEv=M.t+60+R()*60;EVS[R()*EVS.length|0][1]()}
+ if(acc>=1){const dts=acc;acc=0;hud(dts,now,se,dk)}
+ if(mapAcc>.25){mapAcc=0;drawMap(now);G.upd()}
+ rd.render(sc,cam)}
+function hud(dt,now,se,dk){const inS=storms.find(s=>Math.hypot(pl.x-s.x,pl.z-s.z)<s.r),near=storms.some(s=>Math.hypot(pl.x-s.x,pl.z-s.z)<s.r+42),F=M.flags,S=M.sim;
+ G.dust=cl(G.dust+(inS?.06:-.006),0,1);M.o2=Math.max(0,M.o2-dt*(inS?3:1)*(G.spr?1.8:1));M.wat=Math.max(0,M.wat-dt*.00012);
+ const sol=cl(se,0,1)*(inS?.28:1)*(F.pow>S?0:1)*3,al=Math.hypot(pl.x,pl.z);M.bat=cl(M.bat+dt*(sol*.0012-.0006+(inS?-.0015:0)),5,100);
+ const tmp=-63+se*28-(1-dk)*10,rad=(.5+(inS?.22:0)+(1-dk)*.02+(F.rad>S?.8:0));
+ $("o2").textContent=ft(M.o2);$("o2b").style.width=M.o2/288+"%";$("wat").textContent=M.wat.toFixed(0)+"%";$("watb").style.width=M.wat+"%";
+ $("sola").textContent=sol.toFixed(2)+" kW";$("solb").style.width=sol/3*100+"%";$("bat").textContent=M.bat.toFixed(0)+"%";$("batb").style.width=M.bat+"%";
+ $("comm").textContent=F.com>S?"DELAYED":"NOMINAL";$("comm").className=F.com>S?"amber":"green";
+ $("tmp").textContent=tmp.toFixed(0)+" °C";$("rad").textContent=rad.toFixed(2)+" µSv/h";$("rad").className=F.rad>S?"red":"";
+ const vis=cl(1/(sc.fog.density*3)*(dk*.6+.4),20,500);$("vis").textContent=vis.toFixed(0)+" m";$("sunel").textContent=(Math.asin(se)/D2R).toFixed(0)+"°";
+ $("dust").textContent=inS?"SEVERE":near?"ELEVATED":"CLEAR";$("dust").className=inS?"red":near?"amber":"cyan";
+ $("sol").textContent=String(1+Math.floor(S/1800)).padStart(3,"0");const lm=((S/1800)%1)*24.66;$("lmst").textContent=String(lm|0).padStart(2,"0")+":"+String((lm%1)*60|0).padStart(2,"0");
+ $("alt").textContent=hAt(pl.x,pl.z).toFixed(1)+" m";$("pos").textContent=pl.x.toFixed(0)+" · "+pl.z.toFixed(0);
+ const st=M.o2<1800?"O₂ LOW":F.pow>S?"POWER FAULT":F.rad>S?"RAD ALERT":near?"DUST WARNING":"NOMINAL";$("stat").textContent=st;$("stat").style.color=st=="NOMINAL"?"":"#ffb45c";$("sys").textContent=M.o2<1800?"LIFE SUPPORT ALERT":"SYSTEM ONLINE";
+ const co=obj.findIndex(o=>!o[1]);$("curobj").textContent=co<0?"COMPLETE":obj[co][0].toUpperCase();
+ if(Math.hypot(pl.x-SURVEY.x,pl.z-SURVEY.z)<15){done(0);tutAdv(3)}if(obj[2][1]&&obj[0][1]&&obj[1][1]&&Math.hypot(pl.x-rp.x,pl.z-rp.z)<15)done(3);
+ $("obj").innerHTML=obj.map(o=>`<div style="color:${o[1]?"#8ce6a0":"#e5f7fa"}">${o[1]?"☑":"☐"} ${o[0]}</div>`).join("");$("pts").textContent=M.pts+" PTS";
+ const nk=storms.map(s=>{const d=Math.hypot(pl.x-s.x,pl.z-s.z)-s.r,cd=Math.cos(s.a)*(pl.x-s.x)+Math.sin(s.a)*(pl.z-s.z),ap=cd>0&&d>0?Math.max(.1,(Math.cos(s.a)*(pl.x-s.x)+Math.sin(s.a)*(pl.z-s.z)-s.r)/(s.v*.2*M.spd)):0;return `<div><b style="color:#ffb45c">${s.name}</b> · SEV ${s.sev} · ${(s.a/D2R%360).toFixed(0)}° · ${(s.v*.2).toFixed(1)} m/s · ETA ${cd>s.r&&d>0?ft(Math.max(0,d)/(s.v*.2*M.spd)):"—"}</div>`});$("st").innerHTML=nk.join("");
+ $("mn").innerHTML=MOONS.map((m,i)=>`<div data-m="${i}" style="cursor:pointer"><b style="color:#69eaff">${m[0]}</b> · ${m[1].split(" ")[0]} km · ${m[2]} · ${m[4]}</div>`).join("");
+ helmetUpd(dt,tmp,sol,st);for(const s of storms)if(!M.kd[s.name]&&Math.hypot(pl.x-s.x,pl.z-s.z)<s.r+80){M.kd[s.name]=1;ev("Dust storm warning: "+s.name,"w")}}
+function drawMap(now){const W=240,sc2=W/620,x=v=>(v+310)*sc2;mg.drawImage(paint(layer),0,0,W,W);
+ mg.strokeStyle="rgba(105,234,255,.1)";for(let i=0;i<=W;i+=30){mg.beginPath();mg.moveTo(i,0);mg.lineTo(i,W);mg.stroke();mg.beginPath();mg.moveTo(0,i);mg.lineTo(W,i);mg.stroke()}
+ storms.forEach(s=>{mg.fillStyle="rgba(255,75,60,.25)";mg.strokeStyle="rgba(255,90,79,.9)";mg.beginPath();mg.arc(x(s.x),x(s.z),s.r*sc2,0,7);mg.fill();mg.stroke();mg.beginPath();mg.moveTo(x(s.x),x(s.z));mg.lineTo(x(s.x+Math.cos(s.a)*s.r*3),x(s.z+Math.sin(s.a)*s.r*3));mg.setLineDash([3,3]);mg.stroke();mg.setLineDash([])});
+ mg.fillStyle="#8ce6a0";mg.beginPath();mg.arc(x(rp.x),x(rp.z),4,0,7);mg.fill();
+ mg.strokeStyle="#69eaff";mg.setLineDash([4,4]);mg.beginPath();mg.arc(x(SURVEY.x),x(SURVEY.z),10,0,7);mg.stroke();mg.setLineDash([]);
+ mg.save();mg.translate(x(pl.x),x(pl.z));mg.rotate(-pl.yaw);mg.fillStyle="#fff";mg.beginPath();mg.moveTo(0,-8);mg.lineTo(5,6);mg.lineTo(-5,6);mg.fill();mg.restore()}
+hud(0,0,0,1);requestAnimationFrame(frame);
 })();
-</script>
-</body>
-</html>
+</script></body></html>
+git 
