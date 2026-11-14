@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07121a">
+<title>M.A.R.S. — Mission Control System</title>
+<style>
+:root{
+  --bg:#061018;--panel:rgba(7,20,29,.78);--panel2:rgba(10,29,39,.88);
+  --line:rgba(88,218,239,.42);--cyan:#69eaff;--cyan2:#24b9d2;
+  --amber:#ffb45c;--red:#ff5a4f;--green:#8ce6a0;--text:#e5f7fa;
+  --muted:#8db4bf;--shadow:0 0 24px rgba(38,190,218,.10);
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:2;background:linear-gradient(90deg,rgba(47,190,220,.025) 1px,transparent 1px),linear-gradient(rgba(47,190,220,.025) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,black,transparent 85%)}
+#world{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.topbar{position:fixed;z-index:5;left:18px;right:18px;top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:none}
+.brand{display:flex;align-items:center;gap:11px;pointer-events:auto}
+.brand-mark{width:39px;height:39px;border:1px solid var(--cyan);border-radius:50%;display:grid;place-items:center;color:var(--cyan);font-size:19px;box-shadow:0 0 18px #2bbbd533}
+.brand h1{font-size:19px;letter-spacing:4px;margin:0;color:var(--cyan);font-weight:700}
+.brand small{display:block;color:var(--muted);font-size:9px;letter-spacing:2px;margin-top:3px}
+.top-status{display:flex;gap:8px;align-items:center;pointer-events:auto}
+.pill{border:1px solid var(--line);background:var(--panel);padding:8px 11px;border-radius:3px;font-size:10px;letter-spacing:1.2px;color:var(--muted);backdrop-filter:blur(12px)}
+.pill strong{color:var(--cyan);font-weight:700}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:7px;box-shadow:0 0 8px var(--green)}
+.layout{position:fixed;z-index:4;inset:68px 16px 56px;display:grid;grid-template-columns:minmax(230px,270px) 1fr minmax(230px,270px);gap:12px;pointer-events:none}
+.column{display:flex;flex-direction:column;gap:10px;min-height:0}
+.panel{pointer-events:auto;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);backdrop-filter:blur(12px);border-radius:5px;padding:12px;position:relative;overflow:hidden}
+.panel:before{content:"";position:absolute;left:0;top:0;width:34px;height:2px;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.panel-title{display:flex;justify-content:space-between;align-items:center;color:var(--cyan);font-size:10px;letter-spacing:1.7px;font-weight:700;margin-bottom:11px}
+.panel-title span:last-child{font-size:9px;color:var(--muted);font-weight:400;letter-spacing:1px}
+.metric{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin:7px 0;font-size:11px;color:var(--muted)}
+.metric b{font-size:13px;color:var(--text);font-weight:600;text-align:right}
+.metric b.cyan{color:var(--cyan)}.metric b.amber{color:var(--amber)}.metric b.red{color:var(--red)}
+.rule{height:1px;background:rgba(100,205,224,.15);margin:9px 0}
+.bar{height:5px;background:#17303a;border-radius:10px;overflow:hidden;margin-top:5px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan2),var(--cyan));box-shadow:0 0 10px var(--cyan);width:70%;transition:width .3s}
+.bar.amber i{background:linear-gradient(90deg,#bd6b27,var(--amber));box-shadow:0 0 10px var(--amber)}
+.center{position:relative;pointer-events:none;min-width:0}
+.center-top{position:absolute;top:8px;left:50%;transform:translateX(-50%);text-align:center;white-space:nowrap;text-shadow:0 2px 8px #000}
+.center-top .coordinates{font-size:10px;letter-spacing:2px;color:var(--cyan)}
+.center-top .location{font-size:9px;color:#d5b39a;letter-spacing:1.5px;margin-top:5px}
+.center-bottom{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-size:10px;color:#d3e9ed;letter-spacing:1px;text-align:center;text-shadow:0 2px 8px #000;white-space:nowrap}
+.crosshair{position:absolute;left:50%;top:50%;width:18px;height:18px;transform:translate(-50%,-50%);border:1px solid rgba(105,234,255,.7);border-radius:50%;opacity:.75}
+.crosshair:before,.crosshair:after{content:"";position:absolute;background:var(--cyan);opacity:.7}
+.crosshair:before{width:1px;height:30px;left:8px;top:-7px}.crosshair:after{height:1px;width:30px;top:8px;left:-7px}
+.minimap{width:100%;aspect-ratio:1;display:block;background:#21140f;border:1px solid rgba(105,234,255,.28);border-radius:3px}
+.map-wrap{position:relative}
+.map-legend{display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin-top:7px}
+.legend-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px}
+.controls{position:fixed;z-index:6;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:7px;align-items:center;pointer-events:auto}
+button,.tab{border:1px solid var(--line);background:rgba(5,18,26,.9);color:var(--cyan);padding:9px 12px;border-radius:3px;font-size:10px;letter-spacing:1px;cursor:pointer;transition:.2s}
+button:hover,.tab:hover,button.active,.tab.active{background:rgba(35,153,177,.22);border-color:var(--cyan);box-shadow:0 0 12px #32d3ed22}
+button:focus-visible,.tab:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.alert{display:none;border-color:var(--red);color:#ffd0c9}
+.alert.show{display:block;animation:pulse 1.4s infinite}
+@keyframes pulse{50%{box-shadow:0 0 18px #ff5a4f55}}
+.small-note{font-size:9px;color:var(--muted);line-height:1.45}
+.tabs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.tab{padding:7px 9px;font-size:9px}
+.modal-backdrop{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;padding:18px}
+.modal-backdrop.open{display:flex}
+.modal{width:min(760px,100%);max-height:min(82vh,760px);overflow:auto;background:rgba(5,17,25,.97);border:1px solid var(--line);box-shadow:0 0 50px #23b9d233;border-radius:6px;padding:18px;position:relative}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.modal-head h2{font-size:15px;letter-spacing:2px;color:var(--cyan);margin:0}
+.close{font-size:18px;padding:5px 10px}
+.modal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.data-card{padding:12px;border:1px solid rgba(105,234,255,.2);background:rgba(13,37,48,.55);border-radius:4px}
+.data-card h3{font-size:11px;letter-spacing:1px;color:var(--amber);margin:0 0 7px}
+.data-card p{font-size:11px;line-height:1.55;color:#bdd4d9;margin:0}
+.data-card strong{color:var(--text)}
+.search{width:100%;background:#0a202a;border:1px solid var(--line);color:var(--text);padding:10px;margin:0 0 12px;border-radius:3px;outline:none}
+.search:focus{border-color:var(--cyan)}
+.log{font-family:Consolas,monospace;font-size:10px;line-height:1.65;color:#b4d5dc;max-height:190px;overflow:auto}
+.log div:before{content:"> ";color:var(--cyan)}
+.footer{position:fixed;z-index:5;bottom:8px;left:16px;right:16px;display:flex;justify-content:space-between;pointer-events:none;color:#8db4bf;font-size:9px;letter-spacing:1px;text-shadow:0 1px 5px #000}
+@media(max-width:900px){
+ .layout{grid-template-columns:210px 1fr 210px;inset:65px 9px 55px;gap:7px}
+ .panel{padding:9px}.metric{font-size:10px}.metric b{font-size:11px}
+}
+@media(max-width:680px){
+ .topbar{left:9px;right:9px}.brand h1{font-size:15px}.brand small{font-size:8px}
+ .top-status .pill:nth-child(2){display:none}
+ .layout{inset:62px 8px 58px;grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr;gap:7px}
+ .column.left{grid-column:1;grid-row:1;max-height:34vh;overflow:auto}
+ .column.right{grid-column:2;grid-row:1;max-height:34vh;overflow:auto}
+ .center{grid-column:1/3;grid-row:2}
+ .center-top{top:5px}.center-bottom{bottom:3px;font-size:8px}
+ .panel{padding:8px}.panel-title{font-size:9px;margin-bottom:7px}
+ .metric{margin:5px 0;font-size:9px}.metric b{font-size:10px}
+ .minimap{max-height:120px}
+ .controls{bottom:max(8px,env(safe-area-inset-bottom));width:calc(100% - 16px);justify-content:center;flex-wrap:wrap}
+ button{padding:8px 9px;font-size:9px}
+ .footer{display:none}
+ .modal-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<canvas id="world"></canvas>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">✧</div>
+    <div><h1>M.A.R.S.</h1><small>MISSION ASSISTANCE & RECONNAISSANCE SYSTEM</small></div>
+  </div>
+  <div class="top-status">
+    <div class="pill"><span class="dot"></span><strong id="systemState">SYSTEM ONLINE</strong></div>
+    <div class="pill">MISSION <strong>ARES-01</strong></div>
+    <div class="pill">SOL <strong id="solTop">001</strong></div>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="column left">
+    <section class="panel">
+      <div class="panel-title"><span>PLANETARY TELEMETRY</span><span>REFERENCE</span></div>
+      <div class="metric"><span>Surface gravity</span><b class="cyan">3.71 m/s²</b></div>
+      <div class="metric"><span>Atmospheric pressure</span><b>6.4 mbar</b></div>
+      <div class="metric"><span>Mean temperature</span><b>−63 °C</b></div>
+      <div class="metric"><span>Solar irradiance</span><b>586 W/m²</b></div>
+      <div class="metric"><span>Atmospheric CO₂</span><b>≈95%</b></div>
+      <div class="metric"><span>Atmospheric O₂</span><b>≈0.16%</b></div>
+      <div class="rule"></div>
+      <div class="metric"><span>Martian day</span><b>24h 39m 35s</b></div>
+      <div class="metric"><span>Martian year</span><b>687 Earth days</b></div>
+      <div class="small-note">Planetary reference values; local conditions vary by location, season and time of day.</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title"><span>LIFE SUPPORT</span><span id="lifeState">SIMULATION</span></div>
+      <div class="metric"><span>Oxygen reserve</span><b id="oxygenText" class="cyan">08:00:00</b></div>
+      <div class="bar"><i id="oxygenBar" style="width:100%"></i></div>
+      <div class="metric"><span>Habitat pressure</span><b>101.3 kPa*</b></div>
+      <div class="metric"><span>Habitat temperature</span><b>21 °C*</b></div>
+      <div class="metric"><span>Water reserve</span><b id="waterText">82%</b></div>
+      <div class="bar"><i id="waterBar" style="width:82%"></i></div>
+      <div class="metric"><span>CO₂ scrubber</span><b class="cyan">NOMINAL*</b></div>
+      <div class="small-note">*Illustrative habitat setpoints/status, not actual spacecraft readings.</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title"><span>POWER MANAGEMENT</span><span>SIMULATED</span></div>
+      <div class="metric"><span>Solar generation</span><b id="solarText">— kW</b></div>
+      <div class="bar amber"><i id="solarBar" style="width:68%"></i></div>
+      <div class="metric"><span>Battery reserve</span><b id="batteryText">68%</b></div>
+      <div class="bar"><i id="batteryBar" style="width:68%"></i></div>
+      <div class="metric"><span>Backup fission</span><b class="amber">STANDBY*</b></div>
+      <div class="small-note">Solar output is a simplified demo estimate, not a site-specific engineering forecast.</div>
+    </section>
+  </aside>
+
+  <section class="center">
+    <div class="center-top">
+      <div class="coordinates">SURFACE POSITION <span id="coords">X 000 · Z 000</span></div>
+      <div class="location">MARS / ARCADIA REGION — SIMULATED TERRAIN</div>
+    </div>
+    <div class="crosshair"></div>
+    <div class="center-bottom">WASD MOVE&nbsp;&nbsp; • &nbsp;&nbsp;SHIFT RUN&nbsp;&nbsp; • &nbsp;&nbsp;MOUSE LOOK&nbsp;&nbsp; • &nbsp;&nbsp;DRAG ON TOUCH</div>
+  </section>
+
+  <aside class="column right">
+    <section class="panel">
+      <div class="panel-title"><span>ENVIRONMENTAL SCANNER</span><span>SIMULATED</span></div>
+      <div class="metric"><span>Local temperature</span><b id="temperature">−63 °C</b></div>
+      <div class="metric"><span>Radiation indicator</span><b id="radiation">0.50 µSv/h</b></div>
+      <div class="metric"><span>Dust conditions</span><b id="dustStatus" class="cyan">CLEAR</b></div>
+      <div class="metric"><span>Wind estimate</span><b id="wind">12 m/s</b></div>
+      <div id="stormAlert" class="metric alert"><span>⚠ DUST HAZARD</span><b>NEARBY</b></div>
+      <div class="small-note">Environmental readings are illustrative gameplay values. Radiation and wind are not real-time Mars measurements.</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title"><span>SURFACE NAVIGATION</span><span>LOCAL MAP</span></div>
+      <div class="map-wrap"><canvas id="minimap" class="minimap" width="240" height="240"></canvas></div>
+      <div class="map-legend">
+        <span><i class="legend-dot" style="background:#fff"></i>YOU</span>
+        <span><i class="legend-dot" style="background:#8ce6a0"></i>ROVER</span>
+        <span><i class="legend-dot" style="background:#ff5a4f"></i>HAZARD</span>
+      </div>
+      <div class="metric"><span>Rover distance</span><b id="roverDistance">— m</b></div>
+      <div class="metric"><span>Mission zone</span><b>ARES-01</b></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title"><span>MISSION INTELLIGENCE</span><span>NETWORK</span></div>
+      <div class="metric"><span>Earth signal delay</span><b>3–22 min one-way</b></div>
+      <div class="metric"><span>Earth–Mars distance</span><b>55–400 million km</b></div>
+      <div class="metric"><span>Water ice</span><b class="amber">POTENTIAL RESOURCE</b></div>
+      <div class="metric"><span>MOXIE technology</span><b class="cyan">O₂ DEMONSTRATED*</b></div>
+      <div class="small-note">*NASA's MOXIE experiment demonstrated small-scale oxygen production from Martian CO₂; settlement-scale production remains unproven.</div>
+    </section>
+  </aside>
+</main>
+
+<nav class="controls" aria-label="Mission controls">
+  <button id="btnScan">⌕ ENVIRONMENT SCAN</button>
+  <button id="btnResources">◇ RESOURCE SCAN</button>
+  <button id="btnRover">◎ TRACK ROVER</button>
+  <button id="btnDatabase">▤ MISSION DATABASE</button>
+  <button id="btnAssistant">✧ MISSION AI</button>
+</nav>
+
+<footer class="footer">
+  <span>ARES-01 // MARS SURFACE EXPLORATION</span>
+  <span>REFERENCE DATA + LOCAL SIMULATION // NOT LIVE SPACECRAFT TELEMETRY</span>
+  <span id="missionClock">MISSION ELAPSED 00:00:00</span>
+</footer>
+
+<div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <div class="modal-head"><h2 id="modalTitle">MISSION MODULE</h2><button class="close" id="closeModal" aria-label="Close">×</button></div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+  const fmtTime = s => {
+    s=Math.max(0,Math.floor(s));
+    return [Math.floor(s/3600),Math.floor(s/60)%60,s%60].map(v=>String(v).padStart(2,"0")).join(":");
+  };
+
+  // ---------- 3D Mars environment ----------
+  const canvas=$("world");
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  const scene=new THREE.Scene();
+  scene.background=new THREE.Color(0xb66f51);
+  scene.fog=new THREE.FogExp2(0xb66f51,0.0105);
+  const camera=new THREE.PerspectiveCamera(72,1,0.1,1800);
+  scene.add(new THREE.HemisphereLight(0xffd9bd,0x512414,1.0));
+  const sunlight=new THREE.DirectionalLight(0xffe8d2,1.25);
+  sunlight.position.set(100,150,60);scene.add(sunlight);
+
+  const heightAt=(x,z)=>
+    Math.sin(x*.018)*Math.cos(z*.016)*8+
+    Math.sin(x*.065+z*.045)*2.3+
+    Math.cos(z*.105)*1.1+
+    Math.sin(Math.hypot(x+65,z-35)*.035)*1.4;
+
+  const terrain=new THREE.PlaneGeometry(620,620,170,170);
+  terrain.rotateX(-Math.PI/2);
+  const positions=terrain.attributes.position,colors=[];
+  for(let i=0;i<positions.count;i++){
+    const x=positions.getX(i),z=positions.getZ(i),y=heightAt(x,z);
+    positions.setY(i,y);
+    const t=clamp((y+13)/26,0,1),noise=Math.random()*.035;
+    colors.push(.43+t*.22+noise,.16+t*.12+noise,.085+t*.065);
+  }
+  terrain.setAttribute("color",new THREE.Float32BufferAttribute(colors,3));
+  terrain.computeVertexNormals();
+  scene.add(new THREE.Mesh(terrain,new THREE.MeshLambertMaterial({vertexColors:true})));
+
+  const rockMaterial=new THREE.MeshLambertMaterial({color:0x74391f});
+  const rocks=[];
+  for(let i=0;i<190;i++){
+    const x=(Math.random()-.5)*580,z=(Math.random()-.5)*580,s=.5+Math.random()*2.2;
+    const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(s,0),rockMaterial);
+    rock.position.set(x,heightAt(x,z)+s*.25,z);
+    rock.rotation.set(Math.random()*3,Math.random()*3,Math.random()*3);
+    rock.userData.radius=s*1.2;scene.add(rock);rocks.push(rock);
+  }
+
+  // Distant ridge silhouettes
+  for(let j=0;j<9;j++){
+    const ridge=new THREE.Mesh(new THREE.ConeGeometry(24+Math.random()*28,22+Math.random()*30,5),
+      new THREE.MeshLambertMaterial({color:0x7b3928}));
+    ridge.position.set(-250+j*65,7,-245-Math.random()*45);
+    ridge.rotation.y=Math.random()*Math.PI;scene.add(ridge);
+  }
+
+  const phobos=new THREE.Mesh(new THREE.SphereGeometry(11,18,14),new THREE.MeshBasicMaterial({color:0x9b887b}));
+  phobos.scale.set(1.25,.85,1);scene.add(phobos);
+  const deimos=new THREE.Mesh(new THREE.SphereGeometry(6,16,12),new THREE.MeshBasicMaterial({color:0xb6a393}));
+  scene.add(deimos);
+
+  const rover=new THREE.Group();
+  const chassis=new THREE.Mesh(new THREE.BoxGeometry(3.2,1.0,4.3),new THREE.MeshLambertMaterial({color:0xd8d9d2}));
+  chassis.position.y=1.6;rover.add(chassis);
+  const deck=new THREE.Mesh(new THREE.BoxGeometry(2.2,.25,2.5),new THREE.MeshLambertMaterial({color:0x9da8a7}));
+  deck.position.set(0,2.2,-.15);rover.add(deck);
+  const mast=new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,2.0,8),new THREE.MeshLambertMaterial({color:0xbac4c2}));
+  mast.position.set(0,3.2,-1.1);rover.add(mast);
+  const cameraHead=new THREE.Mesh(new THREE.BoxGeometry(.7,.45,.55),new THREE.MeshLambertMaterial({color:0x253c47}));
+  cameraHead.position.set(0,4.1,-1.1);rover.add(cameraHead);
+  const wheelMat=new THREE.MeshLambertMaterial({color:0x242b2d});
+  for(const x of [-1.75,1.75])for(const z of [-1.35,0,1.35]){
+    const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.58,.58,.35,12),wheelMat);
+    wheel.rotation.z=Math.PI/2;wheel.position.set(x,1,z);rover.add(wheel);
+  }
+  const roverPos={x:92,z:-72};scene.add(rover);
+  const beacon=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,32,8),
+    new THREE.MeshBasicMaterial({color:0x8ce6a0,transparent:true,opacity:.7}));
+  scene.add(beacon);
+
+  const storm={x:-125,z:-135,r:72};
+  const stormRing=new THREE.Mesh(new THREE.CylinderGeometry(storm.r,storm.r,35,48,1,true),
+    new THREE.MeshBasicMaterial({color:0xff493c,transparent:true,opacity:.16,side:THREE.DoubleSide,depthWrite:false}));
+  stormRing.position.set(storm.x,heightAt(storm.x,storm.z)+18,storm.z);scene.add(stormRing);
+  const stormParticles=new THREE.Group();scene.add(stormParticles);
+  const dustMat=new THREE.MeshBasicMaterial({color:0xe5a17b,transparent:true,opacity:.35});
+  for(let i=0;i<100;i++){
+    const p=new THREE.Mesh(new THREE.SphereGeometry(.35+Math.random()*.7,5,5),dustMat);
+    p.position.set(storm.x+(Math.random()-.5)*storm.r*2,5+Math.random()*25,storm.z+(Math.random()-.5)*storm.r*2);
+    p.userData.speed=.4+Math.random()*1.2;stormParticles.add(p);
+  }
+
+  // Player, controls and collision
+  const player={x:0,z:0,yaw:0,pitch:0,keys:{},drag:null};
+  window.addEventListener("keydown",e=>{player.keys[e.code]=true;if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code))e.preventDefault();});
+  window.addEventListener("keyup",e=>player.keys[e.code]=false);
+  canvas.addEventListener("click",()=>{if(!("ontouchstart" in window)&&canvas.requestPointerLock)canvas.requestPointerLock();});
+  canvas.addEventListener("pointerdown",e=>{if(e.pointerType==="touch")player.drag={x:e.clientX,y:e.clientY};});
+  window.addEventListener("pointerup",()=>player.drag=null);
+  window.addEventListener("pointermove",e=>{
+    if(document.pointerLockElement===canvas){player.yaw-=e.movementX*.0022;player.pitch-=e.movementY*.0022;}
+    else if(player.drag){player.yaw-=(e.clientX-player.drag.x)*.004;player.pitch-=(e.clientY-player.drag.y)*.004;player.drag={x:e.clientX,y:e.clientY};}
+    player.pitch=clamp(player.pitch,-1.25,1.25);
+  });
+
+  function collides(x,z){
+    for(const r of rocks){const dx=x-r.position.x,dz=z-r.position.z;if(dx*dx+dz*dz<(r.userData.radius+1.4)**2)return true;}
+    return false;
+  }
+  function resize(){
+    const w=window.innerWidth,h=window.innerHeight;
+    renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+  }
+  window.addEventListener("resize",resize);resize();
+
+  // ---------- Mission simulation ----------
+  const mission={elapsed:0,oxygen:8*3600,water:82,battery:68,scanUntil:0,resourceUntil:0,followRover:false};
+  const minimap=$("minimap"),mapCtx=minimap.getContext("2d");
+  const log=[];
+  function addLog(message){
+    const stamp=fmtTime(mission.elapsed);
+    log.unshift({stamp,message});if(log.length>40)log.pop();
+  }
+  addLog("M.A.R.S. mission systems initialized.");
+  addLog("Planetary reference database loaded.");
+  addLog("Local environment simulation active.");
+
+  function updateHUD(dt,now){
+    const dx=player.x-roverPos.x,dz=player.z-roverPos.z;
+    const distance=Math.hypot(dx,dz);
+    const inStorm=Math.hypot(player.x-storm.x,player.z-storm.z)<storm.r;
+    const nearStorm=Math.hypot(player.x-storm.x,player.z-storm.z)<storm.r+42;
+    mission.oxygen=Math.max(0,mission.oxygen-dt*(inStorm?3:1));
+    mission.water=Math.max(0,mission.water-dt*.00012);
+    mission.battery=clamp(mission.battery+dt*(inStorm?-.0018:.00035),8,100);
+    const dayPhase=(mission.elapsed/1800)%1;
+    const localTemp=-63+Math.sin(dayPhase*Math.PI*2)*24;
+    const radiation=inStorm?0.72:0.50;
+    const wind=inStorm?34:12;
+    const solar=clamp(0.586*4.5*(.45+.55*Math.max(0,Math.sin(dayPhase*Math.PI*2))) * (inStorm?.28:1),0,3.0);
+
+    $("oxygenText").textContent=fmtTime(mission.oxygen);
+    $("oxygenBar").style.width=(mission.oxygen/(8*3600)*100)+"%";
+    $("oxygenBar").style.background=mission.oxygen<1800?"var(--red)":"";
+    $("waterText").textContent=mission.water.toFixed(0)+"%";
+    $("waterBar").style.width=mission.water+"%";
+    $("batteryText").textContent=mission.battery.toFixed(0)+"%";
+    $("batteryBar").style.width=mission.battery+"%";
+    $("solarText").textContent=solar.toFixed(2)+" kW";
+    $("solarBar").style.width=(solar/3*100)+"%";
+    $("temperature").textContent=localTemp.toFixed(0)+" °C";
+    $("radiation").textContent=radiation.toFixed(2)+" µSv/h";
+    $("wind").textContent=wind+" m/s";
+    $("dustStatus").textContent=inStorm?"SEVERE":nearStorm?"ELEVATED":"CLEAR";
+    $("dustStatus").className=inStorm?"red":nearStorm?"amber":"cyan";
+    $("stormAlert").classList.toggle("show",nearStorm);
+    $("coords").textContent=`X ${player.x.toFixed(0)} · Z ${player.z.toFixed(0)}`;
+    $("roverDistance").textContent=distance.toFixed(0)+" m";
+    $("missionClock").textContent="MISSION ELAPSED "+fmtTime(mission.elapsed);
+    $("solTop").textContent=String(1+Math.floor(mission.elapsed/88775)).padStart(3,"0");
+    $("lifeState").textContent=mission.oxygen<=0?"O₂ LOW":"SIMULATION";
+    $("systemState").textContent=mission.oxygen<=0?"LIFE SUPPORT ALERT":"SYSTEM ONLINE";
+
+    // Minimap
+    const W=240,H=240,scale=W/620,mx=x=>(x+310)*scale,mz=z=>(z+310)*scale;
+    mapCtx.clearRect(0,0,W,H);mapCtx.fillStyle="#24150f";mapCtx.fillRect(0,0,W,H);
+    mapCtx.strokeStyle="rgba(105,234,255,.12)";mapCtx.lineWidth=1;
+    for(let i=0;i<=W;i+=30){mapCtx.beginPath();mapCtx.moveTo(i,0);mapCtx.lineTo(i,H);mapCtx.stroke();mapCtx.beginPath();mapCtx.moveTo(0,i);mapCtx.lineTo(W,i);mapCtx.stroke();}
+    mapCtx.fillStyle="rgba(255,75,60,.28)";mapCtx.beginPath();mapCtx.arc(mx(storm.x),mz(storm.z),storm.r*scale,0,Math.PI*2);mapCtx.fill();
+    mapCtx.strokeStyle="rgba(255,90,79,.8)";mapCtx.stroke();
+    mapCtx.fillStyle="#8ce6a0";mapCtx.beginPath();mapCtx.arc(mx(roverPos.x),mz(roverPos.z),4,0,Math.PI*2);mapCtx.fill();
+    mapCtx.save();mapCtx.translate(mx(player.x),mz(player.z));mapCtx.rotate(-player.yaw);
+    mapCtx.fillStyle="#fff";mapCtx.beginPath();mapCtx.moveTo(0,-8);mapCtx.lineTo(5,6);mapCtx.lineTo(-5,6);mapCtx.closePath();mapCtx.fill();mapCtx.restore();
+    if(mission.resourceUntil>now){
+      mapCtx.strokeStyle="#69eaff";mapCtx.setLineDash([4,4]);mapCtx.beginPath();mapCtx.arc(mx(65),mz(105),11,0,Math.PI*2);mapCtx.stroke();mapCtx.setLineDash([]);
+    }
+  }
+
+  // ---------- Modal modules ----------
+  const backdrop=$("modalBackdrop"),modalTitle=$("modalTitle"),modalContent=$("modalContent");
+  function openModal(title,html){modalTitle.textContent=title;modalContent.innerHTML=html;backdrop.classList.add("open");}
+  function closeModal(){backdrop.classList.remove("open");}
+  $("closeModal").addEventListener("click",closeModal);
+  backdrop.addEventListener("click",e=>{if(e.target===backdrop)closeModal();});
+  window.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+
+  const database=[
+    ["Planetary profile","Mars is the fourth planet from the Sun. Its diameter is about 6,779 km and its surface area is approximately 144 million km².","A large range of terrain types makes landing-site selection a major engineering decision."],
+    ["Gravity and human health","Surface gravity is 3.71 m/s², approximately 0.38 Earth gravity. Mass does not change; weight does.","Long-term effects on muscle, bone, balance and cardiovascular health remain research questions."],
+    ["Time and seasons","A sol lasts 24 h 39 min 35 s. A Martian year lasts 687 Earth days. Axial tilt is about 25.2°.","Schedules, solar output, thermal loads and logistics must account for longer seasons."],
+    ["Atmosphere","The atmosphere is about 95% carbon dioxide, with nitrogen and argon as smaller components. Average pressure is around 6.4 mbar.","A habitat needs pressure control, reliable seals, oxygen supply and emergency reserves."],
+    ["Water resources","Water ice is present in polar regions and underground at some locations. Exposed liquid water is unstable under present surface conditions.","Local ice could support drinking water, hygiene, agriculture and potentially propellant after extraction and purification."],
+    ["Energy","Mars receives about 43% of Earth's top-of-atmosphere solar irradiance. Dust and seasons can further reduce solar generation.","Solar power benefits from storage and should be paired with a dependable backup such as fission power."],
+    ["Radiation and protection","Mars lacks a present-day global magnetic field comparable to Earth's, and its thin atmosphere provides limited shielding.","Habitats require shielding strategies, monitoring and carefully designed safe areas."],
+    ["Dust and weather","Mars experiences dust devils, regional and global dust storms, frost and clouds. Dust can persist on equipment.","Panels, seals, filters, radiators and moving machinery need maintenance plans."],
+    ["Regolith and chemistry","Surface materials include rocky deposits and loose regolith. Perchlorates have been detected in Martian soil.","Construction materials require testing; agricultural soil must be treated and isolated from contaminants."],
+    ["Communications and travel","One-way signal delay is roughly 3–22 minutes depending on planetary positions. Conventional journeys take several months.","Crews need autonomy, robust procedures and contingency supplies; favorable launch opportunities recur about every 26 months."],
+    ["Oxygen production","NASA's MOXIE experiment demonstrated oxygen production from Martian atmospheric CO₂ at a small experimental scale.","This is a technology demonstration, not proof of a settlement-scale operational oxygen plant."],
+    ["Moons","Mars has two small natural satellites: Phobos and Deimos.","They are potential scientific and future exploration targets."]
+  ];
+
+  function showDatabase(){
+    const cards=database.map((d,i)=>`<article class="data-card"><h3>${String(i+1).padStart(2,"0")} / ${d[0]}</h3><p>${d[1]}<br><br><strong>BASE IMPLICATION:</strong> ${d[2]}</p></article>`).join("");
+    openModal("MARS SCIENTIFIC DATABASE",`<input class="search" id="dbSearch" placeholder="Search planetary science, resources, hazards..." aria-label="Search database"><div class="modal-grid" id="dbCards">${cards}</div><p class="small-note" style="margin-top:12px">Reference summary based on the supplied research notes and commonly cited NASA Mars fact-sheet values. Figures are approximate and may vary by source or measurement context.</p>`);
+    $("dbSearch").addEventListener("input",e=>{
+      const q=e.target.value.toLowerCase();
+      [...$("dbCards").children].forEach((card,i)=>card.style.display=(database[i].join(" ").toLowerCase().includes(q)?"":"none"));
+    });
+  }
+
+  function showScan(){
+    addLog("Environmental scan completed at player coordinates.");
+    openModal("ENVIRONMENTAL SCAN",`<div class="modal-grid">
+      <article class="data-card"><h3>LOCAL CONDITIONS / SIMULATED</h3><p>Temperature: <strong>${$("temperature").textContent}</strong><br>Radiation indicator: <strong>${$("radiation").textContent}</strong><br>Wind estimate: <strong>${$("wind").textContent}</strong><br>Dust state: <strong>${$("dustStatus").textContent}</strong></p></article>
+      <article class="data-card"><h3>PLANETARY REFERENCE</h3><p>Mean surface temperature: <strong>−63 °C</strong><br>Mean pressure: <strong>~6.4 mbar</strong><br>Atmosphere: <strong>~95% CO₂</strong><br>Solar irradiance: <strong>~586 W/m²</strong></p></article>
+      <article class="data-card"><h3>MISSION ASSESSMENT</h3><p>${$("stormAlert").classList.contains("show")?"A dust hazard is within the monitored zone. Consider avoiding the marked area.":"No simulated dust hazard is currently near the explorer."}<br><br>Continue monitoring local conditions; these readings are generated by this prototype.</p></article>
+      <article class="data-card"><h3>DATA QUALITY</h3><p><strong>REFERENCE:</strong> published planetary facts.<br><strong>SIMULATED:</strong> local weather and radiation indicators.<br><strong>LIVE:</strong> no external live sensor feed connected.</p></article>
+    </div>`);
+  }
+
+  function showResources(){
+    mission.resourceUntil=performance.now()+30000;
+    addLog("Resource scan initiated; candidate ice/regolith markers displayed.");
+    openModal("RESOURCE SCANNER",`<div class="modal-grid">
+      <article class="data-card"><h3>WATER ICE / CANDIDATE</h3><p>Subsurface water ice is known in some Martian regions. This prototype marks a <strong>fictional candidate survey point</strong> on the minimap, not a confirmed deposit.</p></article>
+      <article class="data-card"><h3>REGOLITH / WIDESPREAD</h3><p>Loose surface material may be useful as construction feedstock after characterization and processing. Mechanical properties and local chemistry must be tested.</p></article>
+      <article class="data-card"><h3>ATMOSPHERIC CO₂</h3><p>Carbon dioxide is abundant in the atmosphere and may serve as feedstock for oxygen production and other industrial processes.</p></article>
+      <article class="data-card"><h3>SOIL CHEMISTRY</h3><p>Perchlorates have been detected in Martian soil. Material intended for agriculture or human contact requires careful testing and treatment.</p></article>
+    </div><p class="small-note" style="margin-top:12px">A cyan marker will appear on the local map for 30 seconds. It is a gameplay marker, not a mapped real-world resource location.</p>`);
+  }
+
+  function showRover(){
+    mission.followRover=!mission.followRover;
+    addLog(mission.followRover?"Rover tracking enabled.":"Rover tracking disabled.");
+    openModal("ROVER TELEMETRY",`<div class="modal-grid">
+      <article class="data-card"><h3>ROVER STATUS</h3><p>Telemetry link: <strong>LOCAL SIMULATION</strong><br>Position X: <strong>${roverPos.x.toFixed(1)} m</strong><br>Position Z: <strong>${roverPos.z.toFixed(1)} m</strong><br>Distance from explorer: <strong>${Math.hypot(player.x-roverPos.x,player.z-roverPos.z).toFixed(1)} m</strong></p></article>
+      <article class="data-card"><h3>NAVIGATION</h3><p>Rover marker is shown in green on the minimap. Tracking mode: <strong>${mission.followRover?"ACTIVE":"STANDBY"}</strong>.<br><br>Use the TRACK ROVER button to toggle camera guidance.</p></article>
+    </div>`);
+  }
+
+  function showAssistant(){
+    const stormNear=$("stormAlert").classList.contains("show");
+    const advice=stormNear
+      ?"A dust hazard is approaching the explorer. Avoid the marked red zone and monitor power availability; dust can reduce solar generation."
+      :"Environmental scan is nominal within this simplified simulation. Continue monitoring oxygen, power and local conditions. Mars surface conditions require pressurised habitats and radiation protection.";
+    openModal("M.A.R.S. / MISSION ASSISTANT",`<article class="data-card"><h3>MISSION STATUS SUMMARY</h3><p>${advice}</p></article>
+      <article class="data-card" style="margin-top:10px"><h3>SCIENTIFIC CONTEXT</h3><p>Mars has a thin CO₂-rich atmosphere and an average surface pressure far below Earth's. A human base would need a sealed, pressurised habitat, dependable life support, protected water systems and redundant power.</p></article>
+      <article class="data-card" style="margin-top:10px"><h3>RECENT SYSTEM LOG</h3><div class="log">${log.slice(0,8).map(x=>`<div>[${x.stamp}] ${x.message}</div>`).join("")}</div></article>
+      <p class="small-note" style="margin-top:10px">This is a rule-based interface assistant. It does not use a connected AI model or real spacecraft telemetry.</p>`);
+  }
+
+  $("btnScan").addEventListener("click",showScan);
+  $("btnResources").addEventListener("click",showResources);
+  $("btnRover").addEventListener("click",showRover);
+  $("btnDatabase").addEventListener("click",showDatabase);
+  $("btnAssistant").addEventListener("click",showAssistant);
+
+  // ---------- Animation loop ----------
+  let last=performance.now();
+  function animate(now){
+    requestAnimationFrame(animate);
+    const dt=Math.min(.05,(now-last)/1000);last=now;mission.elapsed+=dt;
+    const keys=player.keys;
+    const speed=(keys.ShiftLeft||keys.ShiftRight?13:5.5)*dt;
+    const forward={x:-Math.sin(player.yaw),z:-Math.cos(player.yaw)};
+    const right={x:Math.cos(player.yaw),z:-Math.sin(player.yaw)};
+    let mx=0,mz=0;
+    if(keys.KeyW||keys.ArrowUp){mx+=forward.x;mz+=forward.z;}
+    if(keys.KeyS||keys.ArrowDown){mx-=forward.x;mz-=forward.z;}
+    if(keys.KeyD||keys.ArrowRight){mx+=right.x;mz+=right.z;}
+    if(keys.KeyA||keys.ArrowLeft){mx-=right.x;mz-=right.z;}
+    const length=Math.hypot(mx,mz);
+    if(length>0){mx=mx/length*speed;mz=mz/length*speed;}
+    const nx=clamp(player.x+mx,-300,300),nz=clamp(player.z+mz,-300,300);
+    if(!collides(nx,player.z))player.x=nx;
+    if(!collides(player.x,nz))player.z=nz;
+
+    if(mission.followRover){
+      const targetYaw=Math.atan2(-(roverPos.x-player.x),-(roverPos.z-player.z));
+      let diff=((targetYaw-player.yaw+Math.PI*3)%(Math.PI*2))-Math.PI;
+      player.yaw+=diff*.035;
+    }
+    camera.position.set(player.x,heightAt(player.x,player.z)+1.8,player.z);
+    camera.rotation.set(player.pitch,player.yaw,0,"YXZ");
+
+    phobos.position.set(Math.cos(mission.elapsed*.018)*390,155,Math.sin(mission.elapsed*.018)*390-290);
+    deimos.position.set(Math.cos(mission.elapsed*.011+2)*490,220,Math.sin(mission.elapsed*.011+2)*490-290);
+    rover.position.set(roverPos.x,heightAt(roverPos.x,roverPos.z),roverPos.z);
+    rover.rotation.y=Math.sin(mission.elapsed*.08)*.12;
+    beacon.position.set(roverPos.x,heightAt(roverPos.x,roverPos.z)+17,roverPos.z);
+    roverPos.x+=Math.sin(mission.elapsed*.16)*.012;
+    roverPos.z+=Math.cos(mission.elapsed*.16)*.012;
+
+    stormParticles.children.forEach(p=>{
+      p.position.x+=p.userData.speed*dt;
+      p.position.y+=Math.sin(now*.001+p.position.z)*.006;
+      if(p.position.x>storm.x+storm.r)p.position.x=storm.x-storm.r;
+    });
+    stormRing.material.opacity=.12+Math.sin(now*.0015)*.035;
+    if(Math.floor(mission.elapsed)!==Math.floor(mission.elapsed-dt))updateHUD(dt,now);
+    renderer.render(scene,camera);
+  }
+  updateHUD(0,performance.now());
+  requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>
