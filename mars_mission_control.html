@@ -1,139 +1,60 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>M.A.R.S. 2.0 — Mars Operations Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#061018;--panel:rgba(7,20,29,.8);--line:rgba(88,218,239,.4);--cyan:#69eaff;--amber:#ffb45c;--red:#ff5a4f;--green:#8ce6a0;--text:#e5f7fa;--muted:#8db4bf}
 *{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
-#world{position:fixed;inset:0;width:100%;height:100%}
+#world{position:fixed;inset:0;width:100%;height:100%;border:0;background:#000}
 .top{position:fixed;z-index:5;left:14px;right:14px;top:max(10px,env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:center;pointer-events:none;gap:8px}
 .top h1{margin:0;font-size:17px;letter-spacing:4px;color:var(--cyan)}.top small{display:block;font-size:8px;letter-spacing:2px;color:var(--muted);margin-top:2px}
 .pill{border:1px solid var(--line);background:var(--panel);padding:7px 10px;border-radius:3px;font-size:10px;letter-spacing:1px;color:var(--muted);margin-left:6px;display:inline-block}.pill b{color:var(--cyan)}
-.layout{position:fixed;z-index:4;inset:60px 14px 92px;display:grid;grid-template-columns:minmax(220px,265px) 1fr minmax(220px,265px);gap:10px;pointer-events:none}
-.col{display:flex;flex-direction:column;gap:8px;min-height:0;overflow:auto;scrollbar-width:none}
-.panel{pointer-events:auto;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(10px);border-radius:4px;padding:10px;position:relative;flex:none}
-.panel:before{content:"";position:absolute;left:0;top:0;width:30px;height:2px;background:var(--cyan)}
-.pt{display:flex;justify-content:space-between;color:var(--cyan);font-size:10px;letter-spacing:1.6px;font-weight:700;margin-bottom:8px}.pt span+span{color:var(--muted);font-weight:400;font-size:9px}
-.m{display:flex;justify-content:space-between;gap:6px;margin:5px 0;font-size:11px;color:var(--muted)}.m b{color:var(--text);font-size:12px;text-align:right}.cyan{color:var(--cyan)!important}.amber{color:var(--amber)!important}.red{color:var(--red)!important}.green{color:var(--green)!important}
-.bar{height:4px;background:#17303a;border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;background:var(--cyan);width:50%}
-.note{font-size:9px;color:var(--muted);line-height:1.45}
-.center{position:relative;pointer-events:none}
-.ctop{position:absolute;top:2px;left:50%;transform:translateX(-50%);display:flex;gap:18px;text-align:center;white-space:nowrap;text-shadow:0 2px 8px #000;background:rgba(5,15,22,.55);padding:6px 14px;border:1px solid rgba(88,218,239,.2);border-radius:3px}
-.ctop div{font-size:9px;color:var(--muted);letter-spacing:1.5px}.ctop b{display:block;font-size:13px;color:var(--cyan);margin-top:3px;letter-spacing:1px}
-.xh{position:absolute;left:50%;top:50%;width:16px;height:16px;transform:translate(-50%,-50%);border:1px solid rgba(105,234,255,.7);border-radius:50%}
-canvas.mm{width:100%;aspect-ratio:1;display:block;background:#21140f;border:1px solid rgba(105,234,255,.25);cursor:crosshair}
-.tabs{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:7px}
 button{border:1px solid var(--line);background:rgba(5,18,26,.9);color:var(--cyan);padding:8px 10px;border-radius:3px;font-size:10px;letter-spacing:1px;cursor:pointer}
-button:hover,button.on{background:rgba(35,153,177,.25);border-color:var(--cyan)}button:focus-visible{outline:2px solid var(--amber)}
-.tabs button{padding:5px 7px;font-size:9px}
+button:hover{background:rgba(35,153,177,.25);border-color:var(--cyan)}button:focus-visible{outline:2px solid var(--amber)}
 .ctl{position:fixed;z-index:6;left:50%;bottom:max(10px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;width:min(1000px,calc(100% - 20px))}
-.log{font:10px/1.6 Consolas,monospace;color:#b4d5dc;max-height:120px;overflow:auto}.log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.log .w{color:var(--amber)}.log .c{color:var(--red)}
-.mb{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;padding:16px}.mb.open{display:flex}
+.note{font-size:9px;color:var(--muted);line-height:1.45}
+.mb{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;padding:16px}.mb.open{display:flex}
 .modal{width:min(780px,100%);max-height:84vh;overflow:auto;background:rgba(5,17,25,.97);border:1px solid var(--line);border-radius:5px;padding:16px}
 .mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.mh h2{margin:0;font-size:14px;letter-spacing:2px;color:var(--cyan)}
-.g{display:grid;grid-template-columns:1fr 1fr;gap:9px}.card{padding:11px;border:1px solid rgba(105,234,255,.2);background:rgba(13,37,48,.55);border-radius:4px;font-size:11px;line-height:1.55;color:#bdd4d9;cursor:default}.card h3{margin:0 0 6px;font-size:11px;letter-spacing:1px;color:var(--amber)}.card strong{color:var(--text)}.card.k{cursor:pointer}.card.k:hover{border-color:var(--cyan)}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:9px}.card{padding:11px;border:1px solid rgba(105,234,255,.2);background:rgba(13,37,48,.55);border-radius:4px;font-size:11px;line-height:1.55;color:#bdd4d9}.card h3{margin:0 0 6px;font-size:11px;letter-spacing:1px;color:var(--amber)}.card strong{color:var(--text)}.card.k{cursor:pointer}.card.k:hover{border-color:var(--cyan)}
 #gmap{width:100%;display:block;background:#1a0f0b;border:1px solid var(--line);cursor:pointer}
-@media(max-width:900px){.layout{grid-template-columns:200px 1fr 200px}.ctop{display:none}}
-@media(max-width:680px){.layout{grid-template-columns:1fr 1fr;grid-template-rows:34vh 1fr;inset:56px 8px 120px}.col{max-height:34vh}.center{grid-column:1/3}.pill:nth-child(n+2){display:none}.g{grid-template-columns:1fr}button{padding:7px 8px;font-size:9px}}
-.helmet{position:fixed;inset:0;z-index:3;pointer-events:none}.visor{position:absolute;inset:1.5% 1%;border-radius:30%/38%;box-shadow:0 0 0 100vmax #070a0d,inset 0 0 90px 30px rgba(0,0,0,.55),inset 0 0 0 2px rgba(120,160,175,.25);background:linear-gradient(115deg,rgba(255,255,255,.05) 0,transparent 18%,transparent 70%,rgba(255,255,255,.04) 80%,transparent 90%),url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='300'><path d='M40 60l70 30M300 40l-50 80M120 240l90-20M330 220l30-40' stroke='white' stroke-opacity='.08' fill='none'/></svg>")}.dustov{position:absolute;inset:0;border-radius:30%/38%;background:radial-gradient(ellipse at 50% 100%,rgba(160,100,70,.55),transparent 60%),radial-gradient(circle at 15% 25%,rgba(150,95,65,.3),transparent 30%);opacity:0;transition:opacity 1s}.hh{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 86px);transform:translateX(-50%);display:flex;gap:14px;font:10px Consolas,monospace;letter-spacing:1px;color:var(--cyan);background:rgba(4,16,22,.55);padding:6px 12px;border:1px solid rgba(105,234,255,.25);border-radius:12px;white-space:nowrap}.hh b{color:#e5f7fa}.hh i{display:inline-block;width:46px;height:4px;background:#17303a;vertical-align:middle;margin-left:4px}.hh u{display:block;height:100%;background:var(--green)}.xh{width:5px;height:5px;border:0;background:#69eaff;box-shadow:0 0 6px #69eaff;transition:.15s}.xh.t{width:12px;height:12px;background:transparent;border:1px solid #8ce6a0;box-shadow:0 0 8px #8ce6a0}#xl{position:absolute;left:50%;top:calc(50% + 16px);transform:translateX(-50%);font:9px Consolas,monospace;letter-spacing:1.5px;color:#8ce6a0;text-shadow:0 1px 4px #000;white-space:nowrap}.panel.c>*:not(.pt){display:none}.panel.c .pt{margin-bottom:0}.pt{cursor:pointer}.mb{z-index:40}#menu{position:fixed;inset:0;z-index:30;display:flex;align-items:center;padding:0 8vw;background:linear-gradient(90deg,rgba(3,8,12,.92),rgba(3,8,12,.35) 70%,transparent)}#menu.off{display:none}.mbox{width:min(340px,100%)}.mbox h1{margin:0;font-size:30px;letter-spacing:7px;color:var(--cyan)}.mbox small{display:block;margin:6px 0 24px;font-size:9px;letter-spacing:3px;color:var(--muted)}.mbox button{display:block;width:100%;text-align:left;margin:0 0 7px;padding:12px 16px;font-size:11px;letter-spacing:3px}.mbox button:disabled{opacity:.35;cursor:default}#tut{position:fixed;z-index:7;left:50%;top:max(118px,calc(env(safe-area-inset-top) + 100px));transform:translateX(-50%);padding:10px 16px;border:1px solid var(--amber);background:rgba(20,12,5,.8);border-radius:4px;font-size:11px;letter-spacing:1.5px;color:var(--amber);text-align:center;display:none;max-width:90vw}#joy,#jb{position:fixed;z-index:7;display:none}.touch #joy{display:block;left:22px;bottom:130px;width:104px;height:104px;border-radius:50%;border:1px solid var(--line);background:rgba(5,18,26,.5);touch-action:none}#joy i{position:absolute;left:34px;top:34px;width:36px;height:36px;border-radius:50%;background:rgba(105,234,255,.35)}.touch #jb{display:block;right:22px;bottom:130px;width:64px;height:64px;border-radius:50%}@media(max-width:680px){.hh{gap:7px;font-size:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 96px)}}</style>
-
-<style>#world{position:fixed;inset:0;width:100%;height:100%;border:0;background:#000}#look{position:fixed;inset:0;z-index:1;touch-action:none;cursor:crosshair}#haze{position:fixed;inset:0;z-index:2;pointer-events:none;background:#b9825c;opacity:0;transition:opacity 2s}
-body.orbit #look,body.orbit #haze,body.orbit .helmet,body.orbit .layout,body.orbit #tut,body.orbit #joy,body.orbit #jb{display:none!important}#menu{z-index:30}</style></head><body>
-<iframe id="world" src="3d map/mars3d.html" title="Real 3D Mars: Cesium Mars terrain with NASA Trek imagery"></iframe><div id="look"></div><div id="haze"></div>
-<div class='helmet'><div class='visor' id='visor'></div><div class='dustov' id='dustov'></div><div class='hh'><span>SOL <b id='hSol'>1</b></span><span>O₂ <b id='hO'>--</b></span><span>BAT <b id='hB'>--</b></span><span>COMM <b id='hC'>OK</b></span><span>SOL PWR <b id='hS'>--</b></span><span>TEMP <b id='hT'>--</b></span><span>STA<i><u id='hSt' style='width:100%'></u></i></span><span><b id='hM'>NOMINAL</b></span></div></div><div id='tut'></div><div id='joy'><i></i></div><button id='jb'>JUMP</button><div id='menu'><div class='mbox'><h1>M.A.R.S.</h1><small id='msub'>EXPLORER</small><div id='mbtn'></div></div></div>
-<header class="top"><div><h1>M.A.R.S. 2.0</h1><small>MARS OPERATIONS &amp; EXPLORATION PLATFORM</small></div><div><span class="pill"><b id="sys">SYSTEM ONLINE</b></span><span class="pill">SOL <b id="sol">001</b></span><span class="pill">LMST <b id="lmst">--:--</b></span><span class="pill">SEASON <b id="lsr">--</b></span></div></header>
-<main class="layout">
-<aside class="col">
-<section class="panel"><div class="pt"><span>LIFE &amp; POWER</span><span>MODEL</span></div>
-<div class="m"><span>Oxygen reserve</span><b id="o2" class="cyan"></b></div><div class="bar"><i id="o2b"></i></div>
-<div class="m"><span>Water reserve</span><b id="wat"></b></div><div class="bar"><i id="watb"></i></div>
-<div class="m"><span>Solar generation</span><b id="sola"></b></div><div class="bar"><i id="solb" style="background:var(--amber)"></i></div>
-<div class="m"><span>Battery</span><b id="bat"></b></div><div class="bar"><i id="batb"></i></div>
-<div class="m"><span>Comms link</span><b id="comm" class="green">NOMINAL</b></div>
-<div class="note">Solar output follows the real Sun angle (season Ls, latitude, local time) and real MDAD dust storms; comms need a relay orbiter above your horizon. Reserves are illustrative.</div></section>
-<section class="panel"><div class="pt"><span>MISSION 01 · WATER EVIDENCE</span><span id="pts">0 PTS</span></div><div id="obj" class="note" style="font-size:11px;line-height:1.8"></div></section>
-<section class="panel"><div class="pt"><span>MISSION TIMELINE</span><span>AUTO</span></div><div class="log" id="tl"></div></section>
-</aside>
-<section class="center"><div class="ctop"><div>ELEVATION<b id="alt">--</b></div><div>POSITION<b id="pos">--</b></div><div>STATUS<b id="stat">NOMINAL</b></div><div>OBJECTIVE<b id="curobj">—</b></div></div><div class="xh" id="xh"></div><div id="xl"></div></section>
-<aside class="col">
-<section class="panel"><div class="pt"><span>ENVIRONMENT</span><span>REAL TERRAIN</span></div>
-<div class="m"><span>Temperature (model)</span><b id="tmp"></b></div><div class="m"><span>Air pressure</span><b id="prs"></b></div><div class="m"><span>Radiation</span><b id="rad"></b></div><div class="m"><span>Visibility</span><b id="vis"></b></div><div class="m"><span>Sun elevation</span><b id="sunel"></b></div><div class="m"><span>Ground slope</span><b id="slp"></b></div><div class="m"><span>Dust</span><b id="dust" class="cyan"></b></div></section>
-<section class="panel"><div class="pt"><span>SURFACE NAVIGATION</span><span id="lyr">SURF</span></div>
-<div class="tabs" id="lt"></div><canvas id="mm" class="mm" width="240" height="240"></canvas><div class="note" id="leg" style="margin-top:6px"></div></section>
-<section class="panel"><div class="pt"><span>DUST STORMS</span><span>MDAD</span></div><div id="st" class="note" style="font-size:10px;line-height:1.7"></div></section>
-<section class="panel"><div class="pt"><span>SKY · MOONS &amp; RELAYS</span><span>CLICK</span></div><div id="mn" class="note" style="font-size:10px;line-height:1.7"></div></section>
-<section class="panel"><div class="pt"><span>OPERATIONS CONSOLE</span><span>LIVE</span></div><div class="log" id="ops"></div></section>
-</aside></main>
-<nav class="ctl"><button id="bScan">ENV SCAN</button><button id="bRes">RESOURCE SCAN</button><button id="bRov">TRACK ROVER</button><button id="bSites">LANDING SITES</button><button id="bMap">GLOBAL MAP (G)</button><button id="b3d">3D ORBIT MAP (M)</button><button id="bOrb">ORBITS</button><button id="bDb">DATABASE</button><button id="bAI">MISSION AI</button><button id="bTime">TIME ×1</button></nav>
+@media(max-width:680px){.pill:nth-child(n+2){display:none}.g{grid-template-columns:1fr}button{padding:7px 8px;font-size:9px}}
+/* outland entrance: splash, main menu, orange pause box */
+.logo{background:#000;border:1px solid #fff;display:block}
+#splash{position:fixed;inset:0;z-index:100;background:#000;display:flex;align-items:center;justify-content:center;transition:opacity .8s}
+#splash img{width:min(42vmin,380px);animation:fi 2.5s both}@keyframes fi{0%{opacity:0;transform:scale(.94)}30%,75%{opacity:1;transform:none}100%{opacity:0}}
+#menu{position:fixed;inset:0;z-index:30;background:linear-gradient(90deg,rgba(0,0,0,.72),transparent 62%)}#menu.off,#pause.off{display:none}
+#menu .logo{position:absolute;left:max(22px,5vw);top:max(22px,4vh);width:min(16vmin,140px)}
+#mbtn{position:absolute;left:max(22px,5vw);top:50%;transform:translateY(-36%)}
+#mbtn button{display:block;background:none;border:0;color:#fff;font:700 clamp(28px,4.8vw,54px)/1.2 Rajdhani,sans-serif;cursor:pointer;text-shadow:0 2px 16px #000;transition:.2s;text-align:left;padding:0;letter-spacing:0}
+#mbtn button:hover{color:var(--amber);transform:translateX(12px);background:none}#mbtn button:disabled{opacity:.3;pointer-events:none}
+.or{border:3px solid #130703;border-radius:28px;background:linear-gradient(135deg,#ff8c00,#ff5e14 58%,#a93519);box-shadow:0 10px 36px rgba(0,0,0,.65)}
+#pause{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:rgba(150,60,15,.28);backdrop-filter:blur(12px) saturate(1.2)}
+#pause .or{padding:26px 56px;text-align:center}
+#pause button{display:block;width:100%;background:none;border:0;color:#fff;font:700 clamp(24px,4.4vw,40px)/1.3 Rajdhani,sans-serif;cursor:pointer;text-shadow:0 2px 4px rgba(0,0,0,.35);padding:0;letter-spacing:0}#pause button:hover{transform:scale(1.06);background:none}
+/* the outland game frame: menu backdrop (bg) or full screen (play) */
+#loc3d{position:fixed;inset:0;width:100%;height:100%;border:0;z-index:50;display:none;background:#000}#loc3d.bg{display:block;z-index:20;pointer-events:none}#loc3d.play{display:block}
+body.mm .top,body.mm .ctl{display:none}
+</style></head><body>
+<iframe id="world" src="3d map/mars3d.html" title="Real 3D Mars: Cesium Mars terrain with NASA Trek imagery"></iframe>
+<header class="top"><div><h1>M.A.R.S. 2.0</h1><small>MARS OPERATIONS &amp; EXPLORATION PLATFORM</small></div><div><span class="pill"><b>SYSTEM ONLINE</b></span><span class="pill">SOL <b id="sol">001</b></span><span class="pill">LMST JEZERO <b id="lmst">--:--</b></span><span class="pill">SEASON <b id="lsr">--</b></span></div></header>
+<nav class="ctl"><button id="bFam">FAMOUS LOCATIONS 3D</button><button id="bSites">LANDING SITES</button><button id="bMap">GLOBAL MAP (G)</button><button id="bOrb">ORBITS</button><button id="bDb">DATABASE</button><button id="bTime">TIME ×1</button><button id="bMenu">MENU (ESC)</button></nav>
 <div class="mb" id="mb" role="dialog" aria-modal="true"><div class="modal"><div class="mh"><h2 id="mt"></h2><button id="mx" aria-label="Close">×</button></div><div id="mc"></div></div></div>
-<script src="3d map/traverses.js"></script><script src="3d map/storms.js"></script>
+<div id="splash"><img class="lg" alt=""></div><div id="menu"><img class="lg logo" alt="OUTLAND"><nav id="mbtn"></nav></div><div id="pause" class="off"><div class="or" id="pbtn"></div></div>
+<script src="3d map/storms.js"></script><script src="3d map/sites.js"></script>
 <script>
 (()=>{"use strict";
-const $=i=>document.getElementById(i),cl=(v,a,b)=>Math.max(a,Math.min(b,v)),R=Math.random,D2R=Math.PI/180,RM=3389500;
-const ft=s=>{s=Math.max(0,s|0);return[s/3600|0,s/60%60|0,s%60].map(v=>String(v).padStart(2,"0")).join(":")};
-// ---- Mars geometry: points are {lat, lon} in degrees, distances in metres, bearings in radians clockwise from north
-const dist=(a,b)=>marsKm(a.lat,a.lon,b.lat,b.lon)*1000;
-const brg=(a,b)=>Math.atan2(((b.lon-a.lon+540)%360-180)*Math.cos(a.lat*D2R),b.lat-a.lat);
-const move=(p,e,n)=>({lat:p.lat+n/RM/D2R,lon:p.lon+e/(RM*Math.cos(p.lat*D2R))/D2R});
-const wrap=a=>((a+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
-const arrow=a=>"↑↗→↘↓↙←↖"[(Math.round(wrap(a)/(Math.PI/4))+8)%8];
-const cmp=b=>["N","NE","E","SE","S","SW","W","NW"][Math.round(((b%360)+360)%360/45)%8];
-const fm=m=>m<1e4?m.toFixed(0)+" m":(m/1000).toFixed(m<1e5?1:0)+" km";
-const fll=p=>Math.abs(p.lat).toFixed(4)+"°"+(p.lat<0?"S":"N")+" "+p.lon.toFixed(4)+"°E";
-// ---- Base, mission rover and survey beacon live on Perseverance's real NASA traverse (3d map/traverses.js)
-const TP=TRAVERSES.M20.pts,BASE={lat:TP[1],lon:TP[0]},PATH=[];
-{let d=0;for(let i=0;i<TP.length;i+=2){const p={lat:TP[i+1],lon:TP[i]};if(PATH.length){const s=dist(PATH[PATH.length-1],p);if(s<.01)continue;d+=s}p.d=d;PATH.push(p)}}
-// Point d metres along the traverse, with the heading of that stretch
-function along(d){let lo=0,hi=PATH.length-1;d=cl(d,0,PATH[hi].d);while(hi-lo>1){const m=lo+hi>>1;if(PATH[m].d<=d)lo=m;else hi=m}
- const a=PATH[lo],b=PATH[hi],t=(d-a.d)/((b.d-a.d)||1);return{lat:a.lat+(b.lat-a.lat)*t,lon:a.lon+(b.lon-a.lon)*t,hdg:brg(a,b)}}
-{const a=along(600),b=along(601);console.assert(dist(along(0),BASE)<.01&&dist(BASE,a)<=600.01&&dist(a,b)<=1.01&&dist(a,b)>.5,"along() walks the traverse from the landing point")}
-const SURVEY=along(600);
-// Rover paths decimated to ~5 m for the minimap
-const TRK={};for(const k in TRAVERSES){const p=TRAVERSES[k].pts,o=[];for(let i=0;i<p.length;i+=2){const q={lat:p[i+1],lon:p[i]};if(!o.length||dist(o[o.length-1],q)>5)o.push(q)}TRK[k]=o}
-// ---- storms: the real MDAD record (3d map/storms.js), replayed at one Mars sol per mission sol,
-// starting at MY28 Ls 255° (the 2007 global dust storm) and wrapping at the end of the record
-const Ts=STORMS[0][0],T0=4*360+255,Tn=STORMS[STORMS.length-1][0];
-const WX={T:0,act:[],inS:null,near:null,key:""},myLs=T=>"MY"+(24+Math.floor(T/360))+" Ls "+(T%360).toFixed(0)+"°";
-// Storms active at the current replay date, nearest edge first; d = km from the astronaut to the storm edge (negative = inside)
-function wxUpd(){const T=WX.T=Ts+(T0-Ts+M.sim/1800*360/668.6)%(Tn-Ts);
- WX.act=stormsAt(T).map(s=>({lon:s[1],lat:s[2],r:s[3],id:s[4],seq:s[5],d:marsKm(pl.lat,pl.lon,s[2],s[1])-s[3],brg:brg(pl,{lat:s[2],lon:s[1]})/D2R})).sort((a,b)=>a.d-b.d);
- WX.inS=WX.act.find(s=>s.d<0)||null;WX.near=WX.act.find(s=>s.d<300)||null;
- const k=WX.act.map(s=>s.id).join();if(k!=WX.key&&m3ok){WX.key=k;to3d({type:"storms",date:myLs(T),list:WX.act.map(s=>[s.lon,s.lat,s.r,s.id,s.seq])})}}
-// ---- Sun: season Ls from the storm replay date, declination from Mars's 25.19° axial tilt, hour angle from local solar time
+const $=i=>document.getElementById(i),D2R=Math.PI/180;
+const fll=p=>Math.abs(p.lat).toFixed(4)+"°"+(p.lat<0?"S":"N")+" "+(+p.lon).toFixed(4)+"°E";
+// ---- mission clock: M.sim seconds (1800 s = one sol) at TIME ×spd; it runs only while the orbit map is open
+const M={sim:600,spd:1},SPEEDS=[1,5,25,100],G={started:false,menu:true,paused:true};
+const BASE={lat:18.4447,lon:77.4508}; // Perseverance's landing site: local time and sunlight are given for it
+// ---- storms: the real MDAD record (3d map/storms.js), one Mars sol per mission sol from MY28 Ls 255° (the 2007 global storm)
+const Ts=STORMS[0][0],T0=4*360+255,Tn=STORMS[STORMS.length-1][0],WX={T:0,act:[],key:""},myLs=T=>"MY"+(24+Math.floor(T/360))+" Ls "+(T%360).toFixed(0)+"°";
+function wxUpd(){const T=WX.T=Ts+(T0-Ts+M.sim/1800*360/668.6)%(Tn-Ts);WX.act=stormsAt(T);
+ const k=WX.act.map(s=>s[4]).join();if(k!=WX.key&&m3ok){WX.key=k;to3d({type:"storms",date:myLs(T),list:WX.act.map(s=>[s[1],s[2],s[3],s[4],s[5]])})}}
+// ---- Sun: season Ls from the storm replay date, declination from Mars's 25.19° tilt, hour angle from local solar time
 const lmst=lon=>(((M.sim/1800)*24+(lon-BASE.lon)/15)%24+24)%24;
 function sunAt(lat,lon){const Ls=(WX.T%360)*D2R,dec=Math.asin(Math.sin(25.19*D2R)*Math.sin(Ls)),lm=lmst(lon),H=(lm-12)*15*D2R,sl=lon*D2R-H;
- return{dec,sl,lm,el:Math.asin(Math.sin(lat*D2R)*Math.sin(dec)+Math.cos(lat*D2R)*Math.cos(dec)*Math.cos(H)),vec:[Math.cos(dec)*Math.cos(sl),Math.cos(dec)*Math.sin(sl),Math.sin(dec)]}}
-// ---- player (astronaut): position on the real map; hd = heading, ve/vn = east/north velocity m/s
-const pl={lat:BASE.lat,lon:BASE.lon,hd:0,pitch:0,k:{},drag:null,ve:0,vn:0,vy:0,h:0,air:0};
-// What the 3D map reports about the ground under the astronaut: height, gradient, survival rows, sky elevations
-const HR={ok:false,h:0,P:610,dose:.67,gE:0,gN:0,sky:{},rows:null,score:0,max:12,verdict:""};
-const look=$("look");
-function key(code,k,down,rep){pl.k[code]=down?1:0;if(!down)return;if(code=="KeyM"&&!rep)toggleMap();if(code=="KeyG"&&!rep)(mb.classList.contains("open")?closeM():gmap());if(k=="Escape")escKey()}
-addEventListener("keydown",e=>{key(e.code,e.key,1,e.repeat);if(e.code.startsWith("Arrow")||e.code=="Space")e.preventDefault()});
-addEventListener("keyup",e=>key(e.code,e.key,0));
-const lock=()=>{if(!("ontouchstart" in window)&&look.requestPointerLock)look.requestPointerLock()?.catch?.(()=>{})};
-look.addEventListener("click",lock);
-look.addEventListener("pointerdown",e=>{if(e.pointerType=="touch")pl.drag={x:e.clientX,y:e.clientY}});addEventListener("pointerup",()=>pl.drag=null);
-addEventListener("pointermove",e=>{if(document.pointerLockElement===look){pl.hd+=e.movementX*.0022;pl.pitch-=e.movementY*.0022}else if(pl.drag){pl.hd+=(e.clientX-pl.drag.x)*.004;pl.pitch-=(e.clientY-pl.drag.y)*.004;pl.drag={x:e.clientX,y:e.clientY}}pl.pitch=cl(pl.pitch,-1.25,1.25)});
-// ---- state
-const M={t:0,sim:600,spd:1,o2:28800,wat:82,bat:68,rv:100,follow:false,pts:0,flags:{},kd:{}},SPEEDS=[1,5,25,100];
-let RV=along(M.rv),ROUTE=null,DR=null,view="surface";
-const G={paused:true,menu:true,started:false,sta:100,tired:false,spr:false,shake:0,dust:0,bobT:0,tut:0,tutDone:false,bt:0,at:0,
- // Crosshair: name and distance of the rover or beacon you are looking at
- upd(){$('hSt').style.width=G.sta+'%';$('hSt').style.background=G.tired?'var(--red)':'';$('dustov').style.opacity=cl(G.dust,0,.8);let h=null;
-  for(const[p,n,r]of[[RV,'ROVER',150],[SURVEY,'SURVEY BEACON',160]]){const d=dist(pl,p);if(d<r&&Math.abs(wrap(brg(pl,p)-pl.hd))<.07&&Math.abs(pl.pitch)<.4){h=n+' · '+d.toFixed(0)+' m';break}}
-  $('xh').classList.toggle('t',!!h);$('xl').textContent=h||''}};
-const ST={get(){try{return JSON.parse(localStorage.getItem('mars3')||'null')}catch(e){return null}},set(o){try{localStorage.setItem('mars3',JSON.stringify(o))}catch(e){}},clr(){try{localStorage.removeItem('mars3')}catch(e){}}};
-const A={c:null,on:true,init(){try{if(!this.c){const c=this.c=new(window.AudioContext||window.webkitAudioContext)(),b=c.createBuffer(1,22050,22050),o=b.getChannelData(0);for(let i=0;i<o.length;i++)o[i]=R()*2-1;this.n=b}if(this.c.state=='suspended')this.c.resume()}catch(e){this.c=null}},nz(f,v,d,a=.01){const c=this.c;if(!c||!this.on)return;const s=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain(),t=c.currentTime;s.buffer=this.n;s.loop=true;fl.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+a);g.gain.linearRampToValueAtTime(0,t+d);s.connect(fl);fl.connect(g);g.connect(c.destination);s.start(t);s.stop(t+d+.05)},beep(f,d){const c=this.c;if(!c||!this.on)return;const o=c.createOscillator(),g=c.createGain(),t=c.currentTime;o.frequency.value=f;g.gain.setValueAtTime(.06,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+d)},thud(i){this.nz(260,.25+i,.6,.005)},step(r){this.nz(r?700:450,r?.09:.05,.12,.005)},breath(){this.nz(1100,.02,1.8,.8)}};
-// Hard landing after a jump: camera shake, dust on the visor, thud
-function land(v){const i=cl((v-1.5)/4,0,1);G.shake=Math.max(G.shake,.04+i*.2);G.dust=cl(G.dust+.03+i*.1,0,1);A.thud(.15+i*.6)}
-function helmetUpd(dt,tmp,sol,st){$('hO').textContent=ft(M.o2);$('hB').textContent=M.bat.toFixed(0)+'%';$('hC').textContent=M.flags.com>M.sim?'DELAY':relay()?'RELAY':'DTE';$('hS').textContent=sol.toFixed(1)+'kW';$('hT').textContent=tmp.toFixed(0)+'°C';$('hSol').textContent=$('sol').textContent;$('hM').textContent=st;G.bt+=dt;if(G.bt>4){G.bt=0;A.breath()}G.at+=dt;if(G.at>15){G.at=0;saveGame()}}
-const TUT=['Press W (or use the joystick) to move — this is the real Jezero Crater floor','Press SPACE to jump — gravity is only 3.71 m/s²','Open the scanner: ENV SCAN','Travel to the cyan beacon on Perseverance\'s real path'];
-function tutShow(){const t=$('tut');if(G.tutDone){t.style.display='none';return}t.style.display='block';t.textContent='MISSION BRIEFING '+(G.tut+1)+'/4 — '+TUT[G.tut]}
-function tutAdv(n){if(G.tutDone||G.tut!==n)return;G.tut++;if(G.tut>=4){G.tutDone=true;const t=$('tut');t.textContent='TUTORIAL COMPLETE — MISSION AUTHORIZED';setTimeout(()=>{if(!DR)t.style.display='none'},3500);ev('Tutorial complete. Mission authorized.');M.pts+=50}else tutShow()}
-const obj=[["Reach survey zone",0],["Scan surface",0],["Analyze deposit",0],["Return data to rover",0]];
-const tlEl=$("tl"),opsEl=$("ops");
-function ev(msg,cls='',tl=true){if(cls&&G.started){A.beep(cls=='c'?660:880,.25);A.nz(3000,.03,.5)}const s="T+"+ft(M.t).slice(0,5),mk=(el,t)=>{const r=document.createElement("div");r.className=cls;r.textContent=t;el.prepend(r);while(el.children.length>30)el.lastChild.remove()};
- if(tl)mk(tlEl,s+" "+msg);mk(opsEl,"["+ft(M.t)+"] "+msg.toUpperCase())}
-["Landing · Jezero Crater","System online","Real terrain link: Cesium Mars 3D Tiles","Communication link active","Rover tracking enabled"].forEach((m,i)=>{M.t=i*35;ev(m,"",i<2||i==4)});M.t=0;
-const done=i=>{if(!obj[i][1]){obj[i][1]=1;M.pts+=100;ev("Objective complete: "+obj[i][0],"");if(obj.every(o=>o[1])){M.pts+=250;ev("MISSION 01 COMPLETE — new regions unlocked","w")}}};
+ return{dec,sl,lm,vec:[Math.cos(dec)*Math.cos(sl),Math.cos(dec)*Math.sin(sl),Math.sin(dec)]}}
 // ---- data
 const SITES=`Viking 1|NASA|1976-07-20|Chryse Planitia|22.5|-48|First successful Mars lander; long-duration surface weather and imaging, biology experiments.
 Viking 2|NASA|1976-09-03|Utopia Planitia|47.7|134.3|Returned images of frost and ran biology tests; orbiter mapped candidate sites.
@@ -143,8 +64,7 @@ Opportunity|NASA|2004-01-25|Meridiani Planum|-2|-5.5|MER-B; found hematite concr
 Phoenix|NASA|2008-05-25|Vastitas Borealis|68.2|-125.7|Dug into the arctic soil and confirmed shallow water ice; detected perchlorate.
 Curiosity|NASA|2012-08-06|Gale Crater|-4.6|137.4|Found an ancient habitable lake environment at Yellowknife Bay; climbing Mount Sharp.
 InSight|NASA|2018-11-26|Elysium Planitia|4.5|135.6|Seismometer recorded marsquakes and probed the crust, mantle and core.
-Perseverance|NASA|2021-02-18|Jezero Crater|18.4|77.5|Astrobiology rover caching samples in an ancient river delta; flew Ingenuity helicopter.
-Zhurong|CNSA|2021-05-14|Utopia Planitia|25.1|109.9|China's first Mars rover; surveyed dunes and possible hydrated minerals.`.split("\n").map(l=>l.split("|"));
+Perseverance|NASA|2021-02-18|Jezero Crater|18.4|77.5|Astrobiology rover caching samples in an ancient river delta; flew Ingenuity helicopter.`.split("\n").map(l=>l.split("|"));
 const SPOTS=`Jezero Crater|18.4|77.5|Ancient lake basin with a river delta.|Delta sediments, carbonates, clays.|Perseverance sample caching for Mars Sample Return.|Organic-bearing mudstones and delta deposits.
 Gale Crater|-5.4|137.8|150 km crater with a 5 km central mound (Mount Sharp).|Layered sulfates and clays recording climate change.|Curiosity's field site.|Habitable lake environment and organic molecules.
 Valles Marineris|-14|-59|Canyon system over 4,000 km long.|Exposed layered crust, tectonic rifting.|Target for hydrated minerals and sediment studies.|Seen from orbit; layered sulfate deposits.
@@ -154,181 +74,88 @@ Elysium Planitia|3|147|Volcanic plain with Elysium Mons.|Lava plains with recent
 Polar Ice Caps|90|0|Layered deposits of water ice and CO₂ frost.|Layered ice recording climate cycles.|Water and climate archive.|Radar sounding detected thick ice layers.`.split("\n").map(l=>l.split("|"));
 const MOONS=[["Phobos","9,376 km (orbit radius)","7 h 39 min","22.2 km","2.14 km/s","Heavily cratered, spiraling slowly inward toward Mars."],["Deimos","23,463 km (orbit radius)","30 h 18 min","12.4 km","1.35 km/s","Smoother surface; slowly drifting outward."]];
 const ORBS=[["Mars Reconnaissance Orbiter","NASA · 2006","High-resolution imaging (HiRISE), subsurface radar, climate monitoring."],["MAVEN","NASA · 2014","Studies upper atmosphere and loss of gas to space."],["Mars Odyssey","NASA · 2001","Longest-serving Mars orbiter; THEMIS mapping, detected hydrogen (ice) signatures; relay for rovers."],["ExoMars Trace Gas Orbiter","ESA/Roscosmos · 2016","Measures trace gases such as methane; relay for rovers."]];
-const AB={"Mars Reconnaissance Orbiter":"MRO","Mars Odyssey":"ODYSSEY","Mars Express":"MEX","ExoMars TGO":"TGO",MAVEN:"MAVEN"};
-// Highest relay orbiter at least 10° above the astronaut's horizon (from the 3D map's orbits), or null
-const relay=()=>{let b=null;for(const n in AB)if((HR.sky[n]??-90)>10&&(!b||HR.sky[n]>HR.sky[b]))b=n;return b};
 // ---- NASA Trek global imagery tiles (geographic tiling: level z has 2^(z+1) × 2^z tiles of 180/2^z degrees)
-const TL={SURF:"Mars_Viking_MDIM21_ClrMosaic_global_232m",ELEV:"Mars_MGS_MOLA_ClrShade_merge_global_463m"},tiles={};let gmDraw=null;
-function tile(L,z,y,x){const u=`https://trek.nasa.gov/tiles/Mars/EQ/${TL[L]}/1.0.0/default/default028mm/${z}/${y}/${x}.jpg`;if(!tiles[u]){const i=tiles[u]=new Image();i.onload=()=>gmDraw&&gmDraw();i.src=u}return tiles[u]}
-// Draw layer L over the lon/lat box with X(lon)/Y(lat) → px; ppd = px per degree of longitude picks the tile level
-function trek(g,L,lonA,lonB,latA,latB,X,Y,ppd){const z=cl(Math.ceil(Math.log2(ppd*180/256)),0,7),s=180/2**z,n=2**(z+1);
- for(let y=Math.max(0,Math.floor((90-latB)/s));y<=Math.min(2**z-1,Math.floor((90-latA)/s));y++)for(let x=Math.floor((lonA+180)/s);x<=Math.floor((lonB+180)/s);x++){
-  const im=tile(L,z,y,(x%n+n)%n);if(!im.complete||!im.naturalWidth)continue;const lw=-180+x*s,ln=90-y*s;g.drawImage(im,X(lw),Y(ln),X(lw+s)-X(lw),Y(ln-s)-Y(ln))}}
-// ---- minimap: real imagery around the astronaut
-const ZM=[2e3,2e4,2e5],LEG={SURF:"Viking MDIM 2.1 colour mosaic",ELEV:"MOLA shaded relief: blue low → white high"};let layer="SURF",zoom=0;
-const lt=$("lt"),leg=()=>$("leg").textContent=LEG[layer]+" · NASA Trek · "+ZM[zoom]/1000+" km across. Cyan/orange lines: real Perseverance/Curiosity paths. Click to survey in 3D.";
-[["SURF","L"],["ELEV","L"],["2 KM","Z",0],["20 KM","Z",1],["200 KM","Z",2]].forEach(([t,g,z])=>{const b=document.createElement("button");b.textContent=t;b.dataset.g=g;b.className=t=="SURF"||z===0?"on":"";
- b.onclick=()=>{lt.querySelectorAll(`[data-g=${g}]`).forEach(x=>x.classList.toggle("on",x==b));if(g=="L"){layer=t;$("lyr").textContent=t}else zoom=z;leg()};lt.append(b)});leg();
-const mm=$("mm"),mg=mm.getContext("2d");
-const mmGeo=()=>{const W=240,mpp=ZM[zoom]/W,la=mpp/RM/D2R,lo=la/Math.cos(pl.lat*D2R);return{W,mpp,la,lo,X:v=>W/2+(v-pl.lon)/lo,Y:v=>W/2-(v-pl.lat)/la}};
-mm.addEventListener("click",e=>{const r=mm.getBoundingClientRect(),g=mmGeo(),x=(e.clientX-r.left)/r.width*g.W,y=(e.clientY-r.top)/r.height*g.W;
- open3d({type:"fly",lat:pl.lat-(y-g.W/2)*g.la,lon:pl.lon+(x-g.W/2)*g.lo,alt:Math.max(4e3,ZM[zoom]*2),survey:true})});
+const tiles={};let gmDraw=null;
+function tile(z,y,x){const u=`https://trek.nasa.gov/tiles/Mars/EQ/Mars_Viking_MDIM21_ClrMosaic_global_232m/1.0.0/default/default028mm/${z}/${y}/${x}.jpg`;if(!tiles[u]){const i=tiles[u]=new Image();i.onload=()=>gmDraw&&gmDraw();i.src=u}return tiles[u]}
+// Draw the whole planet at tile level 1 into g with X(lon)/Y(lat) → px
+function trek(g,X,Y){for(let y=0;y<2;y++)for(let x=0;x<4;x++){const im=tile(1,y,x);if(im.complete&&im.naturalWidth)g.drawImage(im,X(-180+x*90),Y(90-y*90),X(-90+x*90)-X(-180+x*90),Y(-y*90)-Y(90-y*90))}}
 // ---- modal
-const mb=$("mb");function openM(t,h){if(document.pointerLockElement)document.exitPointerLock();$("mt").textContent=t;$("mc").innerHTML=h;mb.classList.add("open")}function closeM(){mb.classList.remove("open");$("mc").innerHTML="";gmDraw=null}
+const mb=$("mb");function openM(t,h){$("mt").textContent=t;$("mc").innerHTML=h;mb.classList.add("open")}function closeM(){mb.classList.remove("open");$("mc").innerHTML="";gmDraw=null}
 $("mx").onclick=closeM;mb.onclick=e=>{if(e.target==mb)closeM()};
 const card=(h,p,k)=>`<div class="card ${k?"k":""}" ${k?`data-k="${k}"`:""}><h3>${h}</h3>${p}</div>`;
-const flyB=(lat,lon,t="VIEW IN 3D")=>`<button data-fly="${lat},${lon}" style="margin-top:6px">${t}</button> <button data-eva="${lat},${lon}" style="margin-top:6px">EVA HERE</button>`;
-function sites(){openM("LANDING SITES",`<div class="g">${SITES.map((s,i)=>card(s[0].toUpperCase()+" · "+s[1],`<strong>${s[2]}</strong> · ${s[3]}<br>${s[4]}°, ${s[5]}°E<br>${s[6]}<br>${flyB(s[4],s[5],"VIEW + SURVEY")}`)).join("")}</div><p class="note" style="margin-top:8px">Coordinates approximate. VIEW flies the 3D map there and runs a survival survey; EVA puts your astronaut on the real ground there.</p>`)}
-function db(){openM("MARS DATABASE",`<div class="g">${SPOTS.map((s,i)=>card(s[0].toUpperCase(),`<strong>Description:</strong> ${s[3]}<br><strong>Geology:</strong> ${s[4]}<br><strong>Relevance:</strong> ${s[5]}<br><strong>Discoveries:</strong> ${s[6]}<br>${flyB(s[1],s[2])}`)).join("")}</div>`)}
-// ORBS names → names used by the 3D map
-function orbits(){openM("MOONS & ORBITERS",`<div class="g">${MOONS.map(m=>card(m[0].toUpperCase(),`Distance: <strong>${m[1]}</strong><br>Period: <strong>${m[2]}</strong><br>Diameter: <strong>${m[3]}</strong><br>Velocity: <strong>${m[4]}</strong><br>${m[5]}<br>From you: <strong>${skyTxt(m[0])}</strong>`,"o"+m[0])).join("")}${ORBS.map(o=>{const n=o[0].replace("Trace Gas Orbiter","TGO");return card(o[0].toUpperCase(),`<strong>${o[1]}</strong><br>${o[2]}<br>From you: <strong>${skyTxt(n)}</strong>`,"o"+n)}).join("")}</div><p class="note" style="margin-top:8px">Click a moon or orbiter to follow it on the 3D map. Orbits run on mission time.</p>`)}
-const skyTxt=n=>HR.sky[n]===undefined?"—":HR.sky[n]>0?HR.sky[n].toFixed(0)+"° above horizon":"below horizon";
-// Clicks in the info modal: data-fly="lat,lon[,alt]" (3D map there; survey unless alt given), data-eva="lat,lon" (astronaut there), data-k="o<name>" (follow orbiting body)
-mb.addEventListener("click",e=>{const f=e.target.dataset.fly,v=e.target.dataset.eva;
- if(f){const[a,b,c]=f.split(",");return open3d({type:"fly",lat:+a,lon:+b,alt:c?+c:undefined,survey:!c})}
- if(v){const[a,b]=v.split(",");return eva(+a,+b)}
- const c=e.target.closest("[data-k]");if(c)open3d({type:"track",name:c.dataset.k.slice(1)})});
-// global map: NASA Trek Viking mosaic with the real day/night terminator for the current mission time
-function gmap(){openM("GLOBAL MARS MAP",`<canvas id="gmap" width="720" height="360"></canvas><div id="gi" class="note" style="margin-top:8px;font-size:11px">Click anywhere. Cyan = landing sites, amber = science hotspots, orange = real dust storms now (MDAD), white square = base, green = you. Shaded = night for the real Sun position.</div>`);
+const flyB=(lat,lon,t="VIEW ON MAP")=>`<button data-fly="${lat},${lon}" style="margin-top:6px">${t}</button>`;
+// TRAVEL button into the outland game at the famous location whose name contains n, or ""
+const trvB=n=>{const s=SITES3D.find(t=>t.name.toLowerCase().includes(n.toLowerCase()));return s?` <button data-trv="${s.id}" style="margin-top:6px">TRAVEL THERE</button>`:""};
+function sites(){openM("LANDING SITES",`<div class="g">${SITES.map(s=>card(s[0].toUpperCase()+" · "+s[1],`<strong>${s[2]}</strong> · ${s[3]}<br>${s[4]}°, ${s[5]}°E<br>${s[6]}<br>${flyB(s[4],s[5],"VIEW + SURVEY")}${trvB(s[0])}`)).join("")}</div><p class="note" style="margin-top:8px">VIEW flies the orbit map there and runs a survival survey; TRAVEL walks you onto the full 3D model of the site.</p>`)}
+function db(){openM("MARS DATABASE",`<div class="g">${SPOTS.map(s=>card(s[0].toUpperCase(),`<strong>Description:</strong> ${s[3]}<br><strong>Geology:</strong> ${s[4]}<br><strong>Relevance:</strong> ${s[5]}<br><strong>Discoveries:</strong> ${s[6]}<br>${flyB(s[1],s[2])}${trvB(s[0])}`)).join("")}</div>`)}
+function famous(){openM("FAMOUS LOCATIONS · REAL 3D TERRAIN",`<div class="g">${SITES3D.map(s=>card(s.name.toUpperCase(),`<strong>${fll(s)}</strong> · ${s.h} m<br>${s.desc}<br><button data-trv="${s.id}" style="margin-top:6px">TRAVEL THERE</button> <button data-fly="${s.lat},${s.lon},60000" style="margin-top:6px">VIEW FROM ORBIT</button>`)).join("")}</div><p class="note" style="margin-top:8px">TRAVEL walks you onto a full 3D model of the place: NASA MOLA laser altimetry with Mars curvature, outland graphics, rovers where NASA last tracked them and real dust storms.</p>`)}
+function orbits(){openM("MOONS & ORBITERS",`<div class="g">${MOONS.map(m=>card(m[0].toUpperCase(),`Distance: <strong>${m[1]}</strong><br>Period: <strong>${m[2]}</strong><br>Diameter: <strong>${m[3]}</strong><br>Velocity: <strong>${m[4]}</strong><br>${m[5]}`,"o"+m[0])).join("")}${ORBS.map(o=>card(o[0].toUpperCase(),`<strong>${o[1]}</strong><br>${o[2]}`,"o"+o[0].replace("Trace Gas Orbiter","TGO"))).join("")}</div><p class="note" style="margin-top:8px">Click a moon or orbiter to follow it on the 3D map. Orbits run on mission time.</p>`)}
+// Clicks in the modal: data-fly="lat,lon[,alt]" (orbit map there; survey unless alt given), data-trv="<site id>" (outland game there), data-k="o<name>" (follow orbiting body)
+mb.addEventListener("click",e=>{const f=e.target.dataset.fly,v=e.target.dataset.trv;
+ if(f){const[a,b,c]=f.split(",");closeM();if(!G.started)startMap();return to3d({type:"fly",lat:+a,lon:+b,alt:c?+c:undefined,survey:!c})}
+ if(v)return travel(v);
+ const c=e.target.closest("[data-k]");if(c){closeM();if(!G.started)startMap();to3d({type:"track",name:c.dataset.k.slice(1)})}});
+// Global map: NASA Trek Viking mosaic, real day/night terminator and real dust storms (MDAD) for the current mission time
+function gmap(){openM("GLOBAL MARS MAP",`<canvas id="gmap" width="720" height="360"></canvas><div id="gi" class="note" style="margin-top:8px;font-size:11px">Click anywhere. Cyan = landing sites, amber = science hotspots, orange = real dust storms now (MDAD). Shaded = night.</div>`);
  const c=$("gmap"),g=c.getContext("2d"),W=720,H=360,px=l=>(l+180)/360*W,py=l=>(90-l)/180*H;
  const pts=[...SITES.map(s=>[+s[4],+s[5],s[0],"#69eaff",s[6]]),...SPOTS.map(s=>[+s[1],+s[2],s[0],"#ffb45c",s[3]+" "+s[5]])];
- (gmDraw=()=>{g.fillStyle="#3a1d12";g.fillRect(0,0,W,H);trek(g,"SURF",-180,180,-90,90,px,py,W/360);
+ (gmDraw=()=>{g.fillStyle="#3a1d12";g.fillRect(0,0,W,H);trek(g,px,py);
   g.strokeStyle="rgba(0,0,0,.2)";for(let i=0;i<=360;i+=30){g.beginPath();g.moveTo(px(i-180),0);g.lineTo(px(i-180),H);g.stroke()}for(let i=-60;i<=60;i+=30){g.beginPath();g.moveTo(0,py(i));g.lineTo(W,py(i));g.stroke()}
-  const S=sunAt(pl.lat,pl.lon);g.fillStyle="rgba(0,5,15,.55)";g.beginPath();
+  const S=sunAt(BASE.lat,BASE.lon);g.fillStyle="rgba(0,5,15,.55)";g.beginPath();
   for(let la=-89;la<90;la+=2)for(let lo=-179;lo<180;lo+=2)if(Math.sin(S.dec)*Math.sin(la*D2R)+Math.cos(S.dec)*Math.cos(la*D2R)*Math.cos(lo*D2R-S.sl)<0)g.rect(px(lo-1),py(la+1),W/180+.5,H/90+.5);g.fill();
-  WX.act.forEach(s=>{const d=s.r/59.16;g.fillStyle="rgba(255,140,40,.4)";g.beginPath();g.ellipse(px(s.lon),py(s.lat),Math.min(W/2,d/360*W/Math.max(.2,Math.cos(s.lat*D2R))),d/180*H,0,0,7);g.fill()});
-  g.strokeStyle="#fff";g.strokeRect(px(BASE.lon)-4,py(BASE.lat)-4,8,8);
-  pts.forEach(p=>{g.fillStyle=p[3];g.beginPath();g.arc(px(p[1]),py(p[0]),4,0,7);g.fill();g.fillStyle="#fff";g.font="9px Arial";g.fillText(p[2],px(p[1])+6,py(p[0])+3)});
-  g.fillStyle="#8ce6a0";g.beginPath();g.arc(px(pl.lon),py(pl.lat),5,0,7);g.fill()})();
+  WX.act.forEach(s=>{const d=s[3]/59.16;g.fillStyle="rgba(255,140,40,.4)";g.beginPath();g.ellipse(px(s[1]),py(s[2]),Math.min(W/2,d/360*W/Math.max(.2,Math.cos(s[2]*D2R))),d/180*H,0,0,7);g.fill()});
+  pts.forEach(p=>{g.fillStyle=p[3];g.beginPath();g.arc(px(p[1]),py(p[0]),4,0,7);g.fill();g.fillStyle="#fff";g.font="9px Arial";g.fillText(p[2],px(p[1])+6,py(p[0])+3)})})();
  c.onclick=e=>{const r=c.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*W,y=(e.clientY-r.top)/r.height*H;let b=null,bd=18;pts.forEach(p=>{const q=Math.hypot(px(p[1])-x,py(p[0])-y);if(q<bd){bd=q;b=p}});
   const la=b?b[0]:+(90-y/H*180).toFixed(2),lo=b?b[1]:+(x/W*360-180).toFixed(2);
-  $("gi").innerHTML=(b?`<strong style='color:#69eaff'>${b[2]}</strong> (${la}°, ${lo}°E)<br>${b[4]}`:`<strong style='color:#69eaff'>${la}°, ${lo}°E</strong> · ${WX.act.some(s=>marsKm(la,lo,s.lat,s.lon)<s.r)?"inside a dust storm now":"no storm here now"} · ${stormRisk(la,lo).toFixed(1)} storms/Mars year (MDAD)`)+"<br>"+flyB(la,lo,"VIEW + SURVEY IN 3D")}}
-function toggleMap(){if(!G.started||G.menu)return;if(mb.classList.contains("open"))return closeM();setView(view=="orbit"?"surface":"orbit")}
-// moons click
-$("mn").onclick=e=>{const i=e.target.closest("[data-m]");if(i)open3d({type:"track",name:i.dataset.m})};
-// ---- survival survey results (from the 3D map's clicks or ENV SCAN); a good site earns points once
-function onSurvey(d){const k=d.lat.toFixed(1)+","+d.lon.toFixed(1),good=d.verdict=="Good base site";ev(`Site survey ${k}: ${d.score}/${d.max} — ${d.verdict}`,good?"w":"");if(good&&!M.kd["s"+k]){M.kd["s"+k]=1;M.pts+=50;ev("Base site candidate logged (+50 PTS)")}}
-const rowsHtml=()=>HR.rows?`<strong>Survival score ${HR.score}/${HR.max} — ${HR.verdict}</strong><br>`+HR.rows.map(([k,v,s,w])=>`<span style="color:${["#ff5a4f","#ffb45c","#8ce6a0"][s]}">●</span> <strong>${k}</strong>: ${v} <span style="color:#8db4bf">· ${w}</span>`).join("<br>"):"Terrain survey pending: real terrain still loading under you.";
-// ---- buttons
-$("bScan").onclick=()=>{tutAdv(2);done(1);ev("Environment scan complete");if(HR.rows)onSurvey({lat:pl.lat,lon:pl.lon,score:HR.score,max:HR.max,verdict:HR.verdict});
- openM("ENVIRONMENT SCAN · "+fll(pl),`<div class="g">${card("SITE SURVIVAL · REAL TERRAIN",rowsHtml())}${card("LOCAL CONDITIONS",`Elevation <strong>${$("alt").textContent}</strong><br>Pressure <strong>${$("prs").textContent}</strong><br>Temp <strong>${$("tmp").textContent}</strong><br>Radiation <strong>${$("rad").textContent}</strong><br>Visibility <strong>${$("vis").textContent}</strong><br>Dust <strong>${$("dust").textContent}</strong>`)}${card("STORM ASSESSMENT · MDAD",WX.inS?"You are inside real dust storm "+WX.inS.id+".":WX.near?"Storm "+WX.near.id+" is "+WX.near.d.toFixed(0)+" km "+cmp(WX.near.brg)+" of you.":"No observed storm within 300 km.")}${card("SKY",`Sun <strong>${$("sunel").textContent}</strong><br>Relay: <strong>${relay()||"none above horizon"}</strong><br>Phobos: <strong>${skyTxt("Phobos")}</strong><br>Deimos: <strong>${skyTxt("Deimos")}</strong>`)}</div>`)};
-$("bRes").onclick=()=>{done(2);ev("Resource signature detected","w");const ice=HR.rows?HR.rows[1]:null;
- to3d({type:"mark",name:"Resource scan",color:"#ffb45c",lat:pl.lat,lon:pl.lon,desc:`Resource scan by your astronaut at sol ${$("sol").textContent}: ${ice?ice[1]:"ice unknown"}.`});
- openM("RESOURCE SCAN · "+fll(pl),`<div class="g">${card("WATER ICE",ice?`<strong>${ice[1]}</strong><br>Latitude band model from SHARAD radar and Phoenix: ground ice is shallow poleward of ~55°, buried glaciers at mid latitudes.`:"Pending terrain survey.")}${card("SURVEY BEACON",`${dist(pl,SURVEY)<15?"<strong>Deposit analyzed at the beacon.</strong>":"Beacon "+fm(dist(pl,SURVEY))+" "+arrow(brg(pl,SURVEY)-pl.hd)}<br>The beacon sits on Perseverance's real drive path; the deposit itself is fictional.`)}${card("REGOLITH","Construction feedstock after characterization; contains perchlorates (Phoenix).")}${card("3D MAP","Scan location marked on the 3D map.")}</div>`)};
-// Real rover traverse summary from 3d map/traverses.js: km driven and latest position
-const trav=k=>{const p=TRAVERSES[k].pts;let km=0;for(let i=2;i<p.length;i+=2)km+=marsKm(p[i-1],p[i-2],p[i+1],p[i]);return{km,lat:p[p.length-1],lon:p[p.length-2]}};let TRV=null;
-$("bRov").onclick=()=>{M.follow=!M.follow;ev(M.follow?"Rover tracking enabled":"Rover tracking disabled");TRV=TRV||{M20:trav("M20"),MSL:trav("MSL")};
- const rc=(n,t,w)=>card(n,`Driven: <strong>${t.km.toFixed(1)} km</strong><br>Latest: <strong>${t.lat.toFixed(4)}°, ${t.lon.toFixed(4)}°E</strong><br>${w}<br><button data-fly="${t.lat},${t.lon},2000" style="margin-top:6px">VIEW IN 3D</button> <button data-eva="${t.lat},${t.lon}" style="margin-top:6px">EVA HERE</button>`);
- openM("ROVER TRACKING",`<div class="g">${card("MISSION ROVER",`Follow: <strong>${M.follow?"ON":"OFF"}</strong><br>Distance: <strong>${fm(dist(pl,RV))} ${arrow(brg(pl,RV)-pl.hd)}</strong><br>Replay: <strong>${(M.rv/1000).toFixed(2)} of ${(PATH[PATH.length-1].d/1000).toFixed(1)} km</strong> of Perseverance's real path<br>Status: <strong>${M.flags.rov>M.sim?"ANOMALY":"NOMINAL"}</strong><br><button data-fly="${RV.lat},${RV.lon},2000" style="margin-top:6px">VIEW IN 3D</button>`)}${rc("PERSEVERANCE · JEZERO",TRV.M20,"NASA MMGIS traverse")}${rc("CURIOSITY · GALE",TRV.MSL,"NASA MMGIS traverse")}</div>`)};
-$("bSites").onclick=sites;$("bMap").onclick=gmap;$("bOrb").onclick=orbits;$("b3d").onclick=toggleMap;$("bDb").onclick=db;
-$("bTime").onclick=e=>{M.spd=SPEEDS[(SPEEDS.indexOf(M.spd)+1)%4];e.target.textContent="TIME ×"+M.spd;sendClock()};
-// ---- 3D world link: 3d map/mars3d.html is the world (its "Mission control bridge" is the other end)
+  $("gi").innerHTML=(b?`<strong style='color:#69eaff'>${b[2]}</strong> (${la}°, ${lo}°E)<br>${b[4]}`:`<strong style='color:#69eaff'>${la}°, ${lo}°E</strong> · ${WX.act.some(s=>marsKm(la,lo,s[2],s[1])<s[3])?"inside a dust storm now":"no storm here now"} · ${stormRisk(la,lo).toFixed(1)} storms/Mars year (MDAD)`)+"<br>"+flyB(la,lo,"VIEW + SURVEY IN 3D")+(b?trvB(b[2]):"")}}
+// ---- 3D orbit map link: 3d map/mars3d.html (its "Mission control bridge" is the other end)
 const W3=$("world");let m3ok=false,m3q=[];
-// Before the map is ready only one-shot commands queue; streamed state (cam, env, clock, base) is resent on ready
-function to3d(m){m={mc:1,...m};if(m3ok)W3.contentWindow.postMessage(m,"*");else if(/^(mode|fly|track|mark)$/.test(m.type))m3q.push(m)}
-function sendBase(){to3d({type:"base",pl:{lat:pl.lat,lon:pl.lon},rover:RV,survey:SURVEY})}
-// Moons and orbiters run in real time × the TIME setting (not the 49× compressed sol), paused with the mission
-const sendClock=()=>to3d({type:"clock",t:M.sim,rate:G.paused?0:M.spd});
-// surface: first-person astronaut on the real terrain; orbit: free 3D map (spin = main-menu backdrop)
-function setView(v,spin){view=v;pl.k={};document.body.classList.toggle("orbit",v=="orbit");if(v=="orbit"&&document.pointerLockElement)document.exitPointerLock();
- $("b3d").textContent=v=="orbit"?"SURFACE VIEW (M)":"3D ORBIT MAP (M)";to3d({type:"mode",surface:v=="surface",spin:!!spin,lat:pl.lat,lon:pl.lon,hd:pl.hd})}
-function open3d(m){closeM();if(!G.menu)setView("orbit");if(m)to3d(m)}
-// Put the astronaut on the ground at lat/lon and descend there
-function eva(lat,lon){closeM();Object.assign(pl,{lat,lon,ve:0,vn:0,vy:0,h:0,air:0});HR.ok=false;HR.rows=null;ev(`EVA at ${fll(pl)}`,"w");WX.key="";wxUpd();if(!G.menu)setView("surface")}
-// EVA drill from the map's "Stranded!": walk to the target before the drill O₂ (walk time + 60%) runs out
-function drillStart(d){eva(d.lat,d.lon);DR={...d.target,o2:dist(d,d.target)/5.5*1.6};ev(`EVA drill: suit leak — reach ${DR.name} (${fm(dist(d,d.target))})`,"c")}
-function drillUpd(dt){if(!DR)return;DR.o2-=dt*(G.spr?3:1);const d=dist(pl,DR),t=$("tut");
- if(d<60){M.pts+=150;ev(`EVA drill: rescued at ${DR.name} (+150 PTS)`,"w");DR=null;t.textContent="RESCUED";setTimeout(tutShow,3000);return}
- if(DR.o2<=0){M.o2=Math.max(0,M.o2-900);ev(`EVA drill failed ${d.toFixed(0)} m short of ${DR.name} — 15 min O₂ used`,"c");DR=null;t.textContent="DRILL FAILED — OUT OF O₂";setTimeout(tutShow,3000);return}
- t.style.display="block";t.textContent=`EVA DRILL · O₂ ${DR.o2.toFixed(0)} s · ${DR.name} ${fm(d)} ${arrow(brg(pl,DR)-pl.hd)}`}
-addEventListener("message",({data:d})=>{if(!d||!d.mars3d)return;
- if(d.type=="ready"){m3ok=true;to3d({type:"sites",sites:SITES.map(s=>[s[0],s[1],s[2],s[3],+s[4],+s[5],s[6]])});WX.key="";wxUpd();sendBase();sendClock();envUpd();
-  to3d({type:"mode",surface:view=="surface"&&!G.menu,spin:G.menu&&!G.started,lat:pl.lat,lon:pl.lon,hd:pl.hd});m3q.splice(0).forEach(to3d)}
- else if(d.type=="close"){if(G.started&&!G.menu)setView("surface")}
- else if(d.type=="key")key(d.code,d.key,d.down,d.repeat);
- else if(d.type=="here")Object.assign(HR,d,{ok:true});
- else if(d.type=="survey")onSurvey(d);
- else if(d.type=="route"){ROUTE=d.path;ev(`Route planned: ${d.km.toFixed(2)} km, ${d.hours.toFixed(1)} h on foot, climb ${d.climb.toFixed(0)} m, max slope ${d.maxSlope.toFixed(0)}° (on minimap)`)}
- else if(d.type=="eva")eva(d.lat,d.lon);
- else if(d.type=="drill")drillStart(d)});
-$("bAI").onclick=()=>{const r=HR.rows,ns=WX.act[0],co=obj.findIndex(o=>!o[1]),tg=co==0?["survey beacon",SURVEY]:co==3?["rover",RV]:null;
- openM("MISSION AI · TERRAIN ANALYSIS · "+fll(pl),`<div class="g">${card("TERRAIN",r?`Elevation <strong>${HR.h.toFixed(0)} m</strong><br>Slope <strong>${r[4][1]}</strong><br>Pressure <strong>${r[0][1]}</strong> (${r[0][3]})`:"Terrain still loading.")}${card("RESOURCES & EXPOSURE",r?`Ice: <strong>${r[1][1]}</strong><br>Sun: <strong>${r[2][1]}</strong><br>Radiation: <strong>${r[3][1]}</strong><br>Storms: <strong>${r[5][1]}</strong>`:"—")}${card("SITE VERDICT",r?`<strong>${HR.score}/${HR.max} — ${HR.verdict}</strong>`:"—")}${card("RECOMMENDATION",`${tg?"Proceed to "+tg[0]+" "+fm(dist(pl,tg[1]))+" "+arrow(brg(pl,tg[1])-pl.hd)+".":co<0?"Mission complete.":"Run the "+(co==1?"ENV":"RESOURCE")+" SCAN."}<br>${ns?`Nearest storm edge: ${ns.d.toFixed(0)} km ${cmp(ns.brg)} (${ns.id}).${ns.d<300?" <strong style='color:#ff5a4f'>Shelter — storm close.</strong>":" Route is clear."}`:"No storms observed this sol."}<br>${relay()?"Relay via "+relay()+".":"No relay overhead: direct-to-Earth only."}`)}</div><p class="note" style="margin-top:8px">Rule-based assistant over real terrain, MDAD storms and orbit geometry; no connected AI model.</p>`)};
-// ---- random events (fictional); impacts are marked on the 3D map
-const EVS=[()=>{const a=R()*6.283,r=2e4+R()*4e4,p=move(pl,Math.sin(a)*r,Math.cos(a)*r);ev(`Meteor impact detected ${fm(dist(pl,p))} ${cmp(brg(pl,p)/D2R)}`,"w");to3d({type:"mark",name:"Meteor impact (simulated)",color:"#ff5a4f",lat:p.lat,lon:p.lon,desc:"Simulated impact event from mission control's random events."})},()=>{M.flags.rad=M.sim+300;ev("Solar flare — radiation elevated","c")},()=>{M.flags.pow=M.sim+240;ev("Power failure — array offline","c")},()=>{M.flags.com=M.sim+300;ev("Communications delay","w")},()=>{M.flags.rov=M.sim+200;ev("Rover anomaly — holding position","w")},()=>{M.flags.rad=M.sim+200;ev("Radiation alert","c")}];
-let nextEv=40;
-// ---- save / menu
-function saveGame(){if(!G.started)return;ST.set({lat:pl.lat,lon:pl.lon,hd:pl.hd,o2:M.o2,bat:M.bat,wat:M.wat,sim:M.sim,rv:M.rv,t:M.t,pts:M.pts,obj:obj.map(o=>o[1]),tut:G.tutDone,snd:A.on})}
-function startGame(load){const s=load?ST.get():null;if(!load)ST.clr();Object.assign(pl,{lat:BASE.lat,lon:BASE.lon,hd:brg(BASE,SURVEY),pitch:0,ve:0,vn:0,vy:0,h:0,air:0});Object.assign(M,{o2:28800,bat:68,wat:82,sim:600,rv:100,t:0,pts:0});obj.forEach(o=>o[1]=0);DR=null;ROUTE=null;G.tut=0;G.tutDone=false;G.sta=100;G.dust=0;
- if(s){Object.assign(pl,{lat:s.lat,lon:s.lon,hd:s.hd});Object.assign(M,{o2:s.o2,bat:s.bat,wat:s.wat,sim:s.sim,rv:s.rv,t:s.t,pts:s.pts});s.obj.forEach((v,i)=>obj[i][1]=v);G.tutDone=!!s.tut;A.on=s.snd!==false}
- RV=along(M.rv);G.started=true;G.menu=false;G.paused=false;$('menu').classList.add('off');A.init();tutShow();ev(load?'Mission resumed':'New mission started');WX.key="";wxUpd();setView("surface");sendClock();lock()}
-function resume(){G.paused=false;G.menu=false;$('menu').classList.add('off');sendClock();if(view=="surface")lock()}
-function escKey(){if(mb.classList.contains('open'))return closeM();if(!G.started)return;if(G.menu)resume();else if(view=="orbit")setView("surface");else showMenu('pause')}
-const objs=()=>openM('OBJECTIVES',`<div class='card'><h3>MISSION 01 · WATER EVIDENCE · ${M.pts} PTS</h3>${obj.map(o=>(o[1]?'☑ ':'☐ ')+o[0]).join('<br>')}</div>`),missions=()=>openM('MISSIONS',`<div class='g'>${card('MISSION 01 · WATER EVIDENCE','Available: reach the survey zone on Perseverance\'s real path in Jezero Crater, scan, analyze, return data.')}${card('MISSION 02 · ROVER RECOVERY','LOCKED — complete Mission 01.')}${card('MISSION 03 · HABITAT SITE SURVEY','LOCKED')}${card('MISSION 04 · STORM WATCH','LOCKED')}</div>`),credits=()=>openM('CREDITS',`<div class='card'>M.A.R.S. Explorer. Real Mars terrain: Cesium Mars 3D Tiles; imagery: NASA Mars Trek (Viking MDIM 2.1, MGS MOLA); rover paths: NASA MMGIS; dust storms: MDAD (Battalio &amp; Wang 2021); rover model: NASA 3D Resources. Habitat reserves and random events are simulated.</div>`),ex=()=>openM('EXIT',`<div class='card'>Close this tab to exit. Progress autosaves in this browser.</div>`),sets=()=>{openM('SETTINGS',`<div class='g'>${card('AUDIO',`<button id='sSnd'>${A.on?'SOUND: ON':'SOUND: OFF'}</button>`)}${card('SAVE DATA',`<button id='sClr'>DELETE SAVE</button>`)}</div>`);$('sSnd').onclick=e=>{A.on=!A.on;e.target.textContent=A.on?'SOUND: ON':'SOUND: OFF';saveGame()};$('sClr').onclick=e=>{ST.clr();e.target.textContent='DELETED'}};
-function showMenu(m){G.paused=true;G.menu=true;sendClock();$('menu').classList.remove('off');if(document.pointerLockElement)document.exitPointerLock();const p=m=='pause',has=!!ST.get(),it=p?[['RESUME',resume],['OBJECTIVES',objs],['DATABASE',db],['SETTINGS',sets],['RESTART',()=>startGame(false)],['MAIN MENU',()=>{saveGame();G.started=false;showMenu('main')}],['EXIT',ex]]:[['NEW GAME',()=>startGame(false)],['CONTINUE',()=>startGame(true),!has],['MISSIONS',missions],['DATABASE',db],['SETTINGS',sets],['CREDITS',credits],['EXIT',ex]];
- $('msub').textContent=p?'PAUSED · SIMULATION HALTED':'EXPLORER · MARS OPERATIONS & RESEARCH SIMULATOR';if(!p)setView("orbit",true);const b=$('mbtn');b.innerHTML='';it.forEach(i=>{const e=document.createElement('button');e.textContent=i[0];e.disabled=!!i[2];e.onclick=i[1];b.append(e)});if(p)saveGame()}
-document.querySelectorAll('.pt').forEach(t=>t.onclick=()=>t.parentElement.classList.toggle('c'));document.querySelectorAll('.col .panel').forEach(p=>{if(!p.querySelector('#mm,#obj'))p.classList.add('c')});if('ontouchstart' in window)document.body.classList.add('touch');
-const J=pl.joy={x:0,y:0},jo=$('joy');let ja=null;const jm=e=>{const r=jo.getBoundingClientRect();let x=(e.clientX-r.left-52)/40,y=(e.clientY-r.top-52)/40;const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}J.x=x;J.y=y;jo.firstChild.style.transform=`translate(${x*30}px,${y*30}px)`},je=()=>{ja=null;J.x=J.y=0;jo.firstChild.style.transform=''};jo.addEventListener('pointerdown',e=>{ja=e.pointerId;jo.setPointerCapture(ja);jm(e)});jo.addEventListener('pointermove',e=>{if(e.pointerId===ja)jm(e)});jo.addEventListener('pointerup',je);jo.addEventListener('pointercancel',je);$('jb').addEventListener('pointerdown',()=>{pl.k.Space=1;setTimeout(()=>pl.k.Space=0,120)});
-showMenu('main');
-// ---- loop
-const mix=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t),SKY={night:[4,7,13],day:[182,111,81],dusk:[90,120,160],storm:[107,74,53]};
-// Sun, sky and lighting for the 3D world; returns the sun numbers the HUD needs
-function envUpd(){const S=sunAt(pl.lat,pl.lon),se=Math.sin(S.el),dk=cl(se*3+.35,0,1),gl=cl(1-Math.abs(se)*4,0,1)*(se>-.25?1:0);
- let c=mix(mix(SKY.night,SKY.day,dk),SKY.dusk,gl*.5);if(WX.inS)c=mix(c,SKY.storm,.6); // Martian sunsets are blue near the Sun
- to3d({type:"env",sun:S.vec,sky:`rgb(${c.map(v=>v|0)})`,day:dk});return{S,se,dk}}
-let last=performance.now(),acc=0,mapAcc=0;
-function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000);last=now;if(G.paused)return;M.t+=dt;M.sim+=dt*M.spd;acc+=dt;mapAcc+=dt;
- const k=view=="surface"?pl.k:{},sprint=(k.ShiftLeft||k.ShiftRight)&&G.sta>3&&!G.tired,sp=sprint?12:5.5,fe=Math.sin(pl.hd),fn=Math.cos(pl.hd),re=fn,rn=-fe;let me=0,mn=0;
- if(k.KeyW||k.ArrowUp){me+=fe;mn+=fn}if(k.KeyS||k.ArrowDown){me-=fe;mn-=fn}if(k.KeyD||k.ArrowRight){me+=re;mn+=rn}if(k.KeyA||k.ArrowLeft){me-=re;mn-=rn}
- const jx=pl.joy;if(jx&&(jx.x||jx.y)){me+=re*jx.x-fe*jx.y;mn+=rn*jx.x-fn*jx.y}const L=Math.hypot(me,mn);if(L>.01)tutAdv(0);
- // uphill grade along the walk direction from the real terrain gradient; 30° stops you
- const up=L?(HR.gE*me+HR.gN*mn)/L:0,sf=up>0?cl(1-Math.atan(up)/D2R/30,0,1):1;
- const te=L?me/L*sp*sf:0,tn=L?mn/L*sp*sf:0,ac=cl(dt*(pl.air?.8:L?6:4),0,1);pl.ve+=(te-pl.ve)*ac;pl.vn+=(tn-pl.vn)*ac;
- G.spr=!!(sprint&&L&&!pl.air);G.sta=cl(G.sta+(G.spr?-16:9)*dt,0,100);if(G.sta<=0)G.tired=true;else if(G.sta>30)G.tired=false;
- if(k.Space&&!pl.air){pl.vy=4.4;pl.air=1;tutAdv(1)}if(pl.air){pl.vy-=3.71*dt;pl.h+=pl.vy*dt;if(pl.h<=0){const v=-pl.vy;pl.h=0;pl.vy=0;pl.air=0;if(v>1.3)land(v)}}
- Object.assign(pl,move(pl,pl.ve*dt,pl.vn*dt));
- const vs=Math.hypot(pl.ve,pl.vn);if(!pl.air&&vs>.8){G.fd=(G.fd||0)+vs*dt;if(G.fd>(G.spr?2.2:1.5)){G.fd=0;A.step(G.spr)}}
- if(M.follow)pl.hd+=wrap(brg(pl,RV)-pl.hd)*.035;
- G.bobT+=dt*(vs>.5?vs*1.3:1.1);const mv=!pl.air&&vs>.5,bob=pl.air?0:mv?Math.sin(G.bobT*2)*(G.spr?.1:.045):Math.sin(G.bobT)*.012,sw=mv?Math.cos(G.bobT)*(G.spr?.012:.005):0;G.shake=Math.max(0,G.shake-dt*.6);const sh=G.shake*(R()-.5);
- if(view=="surface")to3d({type:"cam",lat:pl.lat,lon:pl.lon,hd:pl.hd+sh*.3,pitch:pl.pitch+sh*.3,roll:sw,up:1.8+pl.h+bob+sh});
- const vz2=$('visor');if(G.shake>.01||G.spr){const a=G.shake*30+(G.spr?1.5:0);vz2.style.transform=`translate(${(R()-.5)*a}px,${(R()-.5)*a}px)`}else if(vz2.style.transform)vz2.style.transform='';
- if(!(M.flags.rov>M.sim))M.rv=Math.min(M.rv+dt*M.spd*.6,PATH[PATH.length-1].d);RV=along(M.rv); // ponytail: 0.6 m/s replay, Perseverance's real pace is ~25 m/sol
- if(M.t>nextEv){nextEv=M.t+60+R()*60;EVS[R()*EVS.length|0]()}
- if(acc>=1){const dts=acc;acc=0;hud(dts);sendClock()}
- if(mapAcc>.25){drillUpd(mapAcc);mapAcc=0;drawMap();G.upd();sendBase()}}
-function hud(dt){wxUpd();const{S,se,dk}=envUpd(),inS=WX.inS,near=WX.near,F=M.flags,T=M.sim;
- G.dust=cl(G.dust+(inS?.06:-.006),0,1);M.o2=Math.max(0,M.o2-dt*(inS?3:1)*(G.spr?1.8:1));M.wat=Math.max(0,M.wat-dt*.00012);
- $("haze").style.opacity=inS?.42:near?.2*(1-near.d/300):0;
- const sol=586*cl(se,0,1)*(inS?.28:.9)*(F.pow>T?0:1)*25*.22/1000;M.bat=cl(M.bat+dt*(sol*.0012-.0006+(inS?-.0015:0)),5,100); // 25 m² of 22% panels
- let tmp=-80+75*cl(se,0,1)**.7;if(inS)tmp=tmp*.6-20; // ponytail: no thermal lag; MEDA-like range −80…−5 °C
- const rad=HR.dose*1000/24.66*(F.rad>T?3:1),rl=relay();
- $("o2").textContent=ft(M.o2);$("o2b").style.width=M.o2/288+"%";$("wat").textContent=M.wat.toFixed(0)+"%";$("watb").style.width=M.wat+"%";
- $("sola").textContent=sol.toFixed(2)+" kW";$("solb").style.width=sol/3*100+"%";$("bat").textContent=M.bat.toFixed(0)+"%";$("batb").style.width=M.bat+"%";
- $("comm").textContent=F.com>T?"DELAYED":rl?"RELAY · "+AB[rl]:"DIRECT-TO-EARTH";$("comm").className=F.com>T?"amber":rl?"green":"amber";
- $("tmp").textContent=tmp.toFixed(0)+" °C";$("prs").textContent=HR.ok?HR.P.toFixed(0)+" Pa":"--";$("rad").textContent=rad.toFixed(0)+" µSv/h";$("rad").className=F.rad>T?"red":"";
- $("vis").textContent=inS?"< 1 km":near?(3+7*near.d/300).toFixed(0)+" km":"> 10 km";$("sunel").textContent=(S.el/D2R).toFixed(0)+"°";
- $("slp").textContent=HR.ok?(Math.atan(Math.hypot(HR.gE,HR.gN))/D2R).toFixed(0)+"°":"--";
- $("dust").textContent=inS?"SEVERE":near?"ELEVATED":"CLEAR";$("dust").className=inS?"red":near?"amber":"cyan";
- $("sol").textContent=String(1+Math.floor(T/1800)).padStart(3,"0");$("lmst").textContent=String(S.lm|0).padStart(2,"0")+":"+String((S.lm%1)*60|0).padStart(2,"0");
- $("alt").textContent=HR.ok?HR.h.toFixed(0)+" m":"--";$("pos").textContent=fll(pl);
- const st=M.o2<1800?"O₂ LOW":F.pow>T?"POWER FAULT":F.rad>T?"RAD ALERT":near?"DUST WARNING":"NOMINAL";$("stat").textContent=st;$("stat").style.color=st=="NOMINAL"?"":"#ffb45c";$("sys").textContent=M.o2<1800?"LIFE SUPPORT ALERT":"SYSTEM ONLINE";
- if(dist(pl,SURVEY)<15){done(0);tutAdv(3)}if(obj[0][1]&&obj[1][1]&&obj[2][1]&&dist(pl,RV)<15)done(3);
- const co=obj.findIndex(o=>!o[1]),tg=co==0?SURVEY:co==3?RV:null;$("curobj").textContent=co<0?"COMPLETE":obj[co][0].toUpperCase()+(tg?" · "+fm(dist(pl,tg))+" "+arrow(brg(pl,tg)-pl.hd):"");
- $("obj").innerHTML=obj.map(o=>`<div style="color:${o[1]?"#8ce6a0":"#e5f7fa"}">${o[1]?"☑":"☐"} ${o[0]}</div>`).join("");$("pts").textContent=M.pts+" PTS";
- $("lsr").textContent=myLs(WX.T);$("st").innerHTML=`<div>${myLs(WX.T)} · MGS/MRO orbital record · from ${fll(pl)}</div>`+(WX.act.slice(0,6).map(s=>`<div><b style="color:#ffb45c">${s.id}</b> · ${Math.round(Math.PI*s.r*s.r/1000)}k km² · ${s.d<0?"<b style='color:#ff5a4f'>OVERHEAD</b>":s.d.toFixed(0)+" km "+cmp(s.brg)}</div>`).join("")||"<div>No storms observed this sol</div>");
- $("mn").innerHTML=["Phobos","Deimos",...Object.keys(AB)].map(n=>`<div data-m="${n}" style="cursor:pointer"><b style="color:${n==rl?"#8ce6a0":"#69eaff"}">${AB[n]||n}</b> · ${skyTxt(n)}${n==rl?" · RELAY":""}</div>`).join("");
- helmetUpd(dt,tmp,sol,st);for(const s of WX.act)if(s.d<800&&!M.kd[s.id]){M.kd[s.id]=1;ev("Dust storm "+s.id+(s.d<0?" overhead":" "+s.d.toFixed(0)+" km "+cmp(s.brg)),s.d<0?"c":"w")}}
-function drawMap(){const{W,mpp,lo,la,X,Y}=mmGeo(),Z=ZM[zoom],line=(p,c,w)=>{mg.strokeStyle=c;mg.lineWidth=w;mg.beginPath();p.forEach(q=>mg.lineTo(X(q.lon),Y(q.lat)));mg.stroke();mg.lineWidth=1};
- mg.fillStyle="#21140f";mg.fillRect(0,0,W,W);trek(mg,layer,pl.lon-W/2*lo,pl.lon+W/2*lo,pl.lat-W/2*la,pl.lat+W/2*la,X,Y,1/lo);
- mg.strokeStyle="rgba(105,234,255,.1)";for(let i=0;i<=W;i+=30){mg.beginPath();mg.moveTo(i,0);mg.lineTo(i,W);mg.stroke();mg.beginPath();mg.moveTo(0,i);mg.lineTo(W,i);mg.stroke()}
- for(const[k,c]of[["M20","rgba(105,234,255,.85)"],["MSL","rgba(255,170,60,.85)"]])if(dist(pl,TRK[k][0])<6e4+Z)line(TRK[k],c,1.5);
- if(ROUTE)line(ROUTE.map(([lat,lon])=>({lat,lon})),"#ffe04f",2);
- WX.act.forEach(s=>{mg.fillStyle="rgba(255,140,40,.25)";mg.beginPath();mg.arc(X(s.lon),Y(s.lat),s.r*1000/mpp,0,7);mg.fill()});
- const ns=WX.act[0];if(ns&&ns.d<1000){const a=ns.brg*D2R,c=W/2;mg.strokeStyle="rgba(255,90,79,.9)";mg.lineWidth=3;mg.beginPath();mg.arc(c,c,W/2-3,a-Math.PI/2-.4,a-Math.PI/2+.4);mg.stroke();mg.lineWidth=1;mg.fillStyle="#ff5a4f";mg.font="9px Consolas";mg.fillText(ns.d<0?"STORM OVERHEAD":"STORM "+ns.d.toFixed(0)+" KM "+cmp(ns.brg),6,W-6)}
- mg.strokeStyle="#fff";mg.strokeRect(X(BASE.lon)-3,Y(BASE.lat)-3,6,6);
- mg.strokeStyle="#69eaff";mg.setLineDash([4,4]);mg.beginPath();mg.arc(X(SURVEY.lon),Y(SURVEY.lat),Math.max(6,15/mpp),0,7);mg.stroke();mg.setLineDash([]);
- if(DR){mg.fillStyle="#ff5a4f";mg.beginPath();mg.arc(X(DR.lon),Y(DR.lat),5,0,7);mg.fill()}
- mg.fillStyle="#8ce6a0";mg.beginPath();mg.arc(X(RV.lon),Y(RV.lat),4,0,7);mg.fill();
- mg.save();mg.translate(W/2,W/2);mg.rotate(pl.hd);mg.fillStyle="#fff";mg.beginPath();mg.moveTo(0,-8);mg.lineTo(5,6);mg.lineTo(-5,6);mg.fill();mg.restore()}
-hud(0);requestAnimationFrame(frame);
+// Before the map is ready only one-shot commands queue; storms, clock and sunlight are resent on ready
+function to3d(m){m={mc:1,...m};if(m3ok)W3.contentWindow.postMessage(m,"*");else if(/^(sleep|mode|fly|track)$/.test(m.type))m3q.push(m)}
+const sendClock=()=>to3d({type:"clock",t:M.sim,rate:G.paused?0:M.spd}),envUpd=()=>to3d({type:"env",sun:sunAt(BASE.lat,BASE.lon).vec});
+addEventListener("message",({data:d})=>{if(!d)return;if(d.loc3d&&d.type=="exit")return travelEnd();if(!d.mars3d)return;
+ if(d.type=="ready"){m3ok=true;WX.key="";wxUpd();sendClock();envUpd();to3d({type:"mode",spin:!G.started,lat:BASE.lat,lon:BASE.lon});m3q.splice(0).forEach(to3d)}
+ else if(d.type=="close")escKey();else if(d.type=="travel")travel(d.id,d.land)});
+// ---- the outland game (locations3d.html), loaded once: main-menu backdrop ("bg"), full screen ("play") or hidden ("");
+// the Cesium map stops rendering whenever it is covered
+const LOC=document.createElement("iframe");let LOCok=false,LOCq=null;LOC.id="loc3d";LOC.title="OUTLAND: famous Mars locations in 3D";LOC.src="locations3d.html?bg=1";document.body.append(LOC);
+const toLoc=m=>{m={loc3d:1,...m};if(LOCok)LOC.contentWindow.postMessage(m,"*");else LOCq=m};
+LOC.onload=()=>{LOCok=true;if(LOCq)LOC.contentWindow.postMessage(LOCq,"*")};
+function locMode(k){LOC.className=k;to3d({type:"sleep",on:!!k});if(k!="play")toLoc({type:k?"bg":"hide"})}
+const has3d=()=>{try{return!!localStorage.getItem("outland_real1")}catch(e){return false}};
+const freeze=()=>{closeM();hideMenus();G.paused=true;sendClock();locMode("play");LOC.focus()};
+// Create New / Continue: the outland game (it keeps its own save); TRAVEL: the game at famous location id
+function play3d(load){freeze();toLoc({type:"start",load})}
+function travel(id,land){if(!SITES3D.some(t=>t.id==id))return;freeze();toLoc({type:"go",id,sim:M.sim,land})}
+// Back from the game: to the orbit map if it was open, otherwise the main menu
+function travelEnd(){focus();if(!G.started)return showMenu("main");locMode("");G.menu=false;G.paused=false;sendClock()}
+// ---- menus (outland's): main = logo + big list over the spinning outland world; pause = orange box over the orbit map
+function startMap(){G.started=true;G.menu=false;G.paused=false;hideMenus();locMode("");to3d({type:"mode",spin:false,lat:BASE.lat,lon:BASE.lon});sendClock()}
+function resume(){G.paused=false;G.menu=false;hideMenus();sendClock()}
+function escKey(){if(mb.classList.contains("open"))return closeM();if(!G.started)return;if(G.menu)resume();else showMenu("pause")}
+const hideMenus=()=>{$("menu").classList.add("off");$("pause").classList.add("off");document.body.classList.remove("mm")};
+const credits=()=>openM("ABOUT GAME",`<div class="card">OUTLAND · M.A.R.S. Create New walks you onto real Mars: NASA MOLA terrain, rovers where NASA last tracked them, real dust storms (MDAD, Battalio &amp; Wang 2021). Mission Control opens the orbit map: Cesium Mars 3D Tiles, NASA Mars Trek imagery, NASA 3D Resources models, real orbits of moons and orbiters.</div>`),
+ ex=()=>openM("EXIT",`<div class="card">Close this tab to exit. Progress autosaves in this browser.</div>`),
+ sets=()=>{openM("SETTINGS",`<div class="g">${card("SAVE DATA",`<button id="sClr">DELETE GAME SAVE</button>`)}${card("TIME",`Mission clock speed: <strong>×${M.spd}</strong> (TIME button on the map)`)}</div>`);$("sClr").onclick=e=>{try{localStorage.removeItem("outland_real1")}catch(er){}e.target.textContent="DELETED"}};
+function showMenu(m){G.menu=true;G.paused=true;sendClock();const p=m=="pause";if(!p)G.started=false;
+ const it=p?[["Continue",resume],["Famous Locations",famous],["Database",db],["Settings",sets],["Main Menu",()=>showMenu("main")]]:[["Create New",()=>play3d(false)],["Continue",()=>play3d(true),!has3d()],["Mission Control",startMap],["Database",db],["Settings",sets],["About Game",credits],["Exit",ex]];
+ $("menu").classList.toggle("off",p);$("pause").classList.toggle("off",!p);document.body.classList.toggle("mm",!p);if(!p){to3d({type:"mode",spin:true,lat:BASE.lat,lon:BASE.lon});locMode("bg")}
+ const b=$(p?"pbtn":"mbtn");b.innerHTML="";it.forEach(i=>{const e=document.createElement("button");e.textContent=i[0];e.disabled=!!i[2];e.onclick=i[1];b.append(e)})}
+// ---- buttons and keys
+$("bFam").onclick=famous;$("bSites").onclick=sites;$("bMap").onclick=gmap;$("bOrb").onclick=orbits;$("bDb").onclick=db;$("bMenu").onclick=()=>showMenu("pause");
+$("bTime").onclick=e=>{M.spd=SPEEDS[(SPEEDS.indexOf(M.spd)+1)%4];e.target.textContent="TIME ×"+M.spd;sendClock()};
+addEventListener("keydown",e=>{if(e.key=="Escape")escKey();else if(e.code=="KeyG"&&!e.repeat&&G.started&&!G.menu)mb.classList.contains("open")?closeM():gmap()});
+// ---- splash: the logo fades in and out for 3 s (any click or key skips) while both worlds load behind it
+// ponytail: text logo; swap in the real OUTLAND logo file (data URI or path) when there is one
+const LOGO="data:image/svg+xml;utf8,"+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='200' height='200'/><circle cx='100' cy='80' r='42' fill='#c1440e'/><path d='M58 80q42 18 84 0' stroke='#7a2a0a' stroke-width='6' fill='none'/><text x='100' y='164' fill='#fff' font-family='Rajdhani,Arial' font-weight='700' font-size='33' text-anchor='middle' letter-spacing='3'>OUTLAND</text></svg>");
+document.querySelectorAll("img.lg").forEach(i=>i.src=LOGO);
+const endSplash=()=>{const s=$("splash");if(s.dataset.done)return;s.dataset.done=1;s.style.opacity=0;setTimeout(()=>s.style.display="none",800)};
+setTimeout(endSplash,3000);addEventListener("pointerdown",endSplash);addEventListener("keydown",endSplash);
+showMenu("main");
+// ---- loop: mission time, storms, sunlight and the header pills (once a second) while the orbit map runs
+let last=performance.now(),acc=0;
+function hud(){wxUpd();envUpd();const lm=lmst(BASE.lon);$("sol").textContent=String(1+Math.floor(M.sim/1800)).padStart(3,"0");$("lmst").textContent=String(lm|0).padStart(2,"0")+":"+String((lm%1)*60|0).padStart(2,"0");$("lsr").textContent=myLs(WX.T)}
+function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000);last=now;if(G.paused)return;M.sim+=dt*M.spd;acc+=dt;if(acc>=1){acc=0;hud()}}
+hud();requestAnimationFrame(frame);
 })();
 </script></body></html>

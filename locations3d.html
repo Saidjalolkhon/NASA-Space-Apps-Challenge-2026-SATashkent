@@ -1,0 +1,417 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>OUTLAND — Mars Exploration</title><link id="fav" rel="icon">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--c:#69eaff;--a:#ffb45c;--l:rgba(88,218,239,.4);--p:rgba(7,20,29,.78)}
+*{box-sizing:border-box;margin:0}html,body{height:100%;overflow:hidden;background:#000;color:#e5f7fa;font-family:Rajdhani,Arial,sans-serif}
+canvas{position:fixed;inset:0;width:100%;height:100%;touch-action:none}.logo{background:#000;border:1px solid #fff;display:block}
+#splash{position:fixed;inset:0;z-index:100;background:#000;display:flex;align-items:center;justify-content:center;transition:opacity .8s}
+#splash img{width:min(42vmin,380px);animation:fi 2.5s both}@keyframes fi{0%{opacity:0;transform:scale(.94)}30%,75%{opacity:1;transform:none}100%{opacity:0}}
+#menu{position:fixed;inset:0;z-index:30;display:none;background:linear-gradient(90deg,rgba(0,0,0,.72),transparent 62%)}
+#menu .logo{position:absolute;left:max(22px,5vw);top:max(22px,4vh);width:min(16vmin,140px)}
+#mb{position:absolute;left:max(22px,5vw);top:50%;transform:translateY(-30%)}
+#mb button{display:block;background:none;border:0;color:#fff;font:700 clamp(30px,5.4vw,58px)/1.22 Rajdhani,sans-serif;cursor:pointer;text-shadow:0 2px 16px #000;transition:.2s;text-align:left;padding:0}
+#mb button:hover{color:var(--a);transform:translateX(12px)}#mb button:disabled{opacity:.3;pointer-events:none}
+.or{border:3px solid #130703;border-radius:28px;background:linear-gradient(135deg,#ff8c00,#ff5e14 58%,#a93519);box-shadow:0 10px 36px rgba(0,0,0,.65)}
+#pause{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(150,60,15,.28);backdrop-filter:blur(12px) saturate(1.2)}
+#pause .or{padding:26px 56px;text-align:center}
+#pause button{display:block;width:100%;background:none;border:0;color:#fff;font:700 clamp(26px,5vw,44px)/1.35 Rajdhani,sans-serif;cursor:pointer;text-shadow:0 2px 4px rgba(0,0,0,.35)}#pause button:hover{transform:scale(1.06)}
+#hud{position:fixed;inset:0;z-index:5;pointer-events:none;display:none}#vig{position:absolute;inset:0;box-shadow:inset 0 0 170px 50px rgba(0,0,0,.5)}
+.top{position:absolute;left:14px;right:14px;top:max(10px,env(safe-area-inset-top));display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.top .logo{height:54px}.top>div:last-child{display:flex;align-items:center}
+.pill{border:1px solid var(--l);background:var(--p);padding:6px 10px;border-radius:3px;font-size:13px;letter-spacing:1px;color:#8db4bf;margin-left:6px}.pill b{color:var(--c)}
+#pb{pointer-events:auto;width:46px;height:46px;border-radius:13px;color:#fff;font:700 20px Rajdhani;cursor:pointer;padding:0;margin-left:8px}
+.ct{position:absolute;top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;gap:18px;background:var(--p);border:1px solid var(--l);padding:6px 14px;border-radius:3px;text-align:center;white-space:nowrap}
+.ct div{font-size:11px;letter-spacing:1.5px;color:#8db4bf}.ct b{display:block;font-size:16px;color:var(--c)}
+.xh{position:absolute;left:50%;top:50%;width:5px;height:5px;background:var(--c);box-shadow:0 0 6px var(--c);transform:translate(-50%,-50%)}
+.hh{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 62px);transform:translateX(-50%);display:flex;gap:14px;font:600 13px Rajdhani;letter-spacing:1px;color:var(--c);background:rgba(4,16,22,.6);padding:6px 14px;border:1px solid var(--l);border-radius:14px;white-space:nowrap}.hh b{color:#e5f7fa}
+.bar{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);transform:translateX(-50%);display:flex;gap:8px}
+.bar button,.mdl button{pointer-events:auto;border:1px solid var(--l);background:rgba(5,18,26,.9);color:var(--c);padding:9px 16px;border-radius:3px;font:700 13px Rajdhani;letter-spacing:2px;cursor:pointer}.bar button:hover,.mdl button:hover{background:rgba(35,153,177,.25)}
+#mm{position:absolute;inset:auto;right:14px;top:max(76px,calc(env(safe-area-inset-top) + 66px));width:180px;height:180px;border:1px solid var(--l);border-radius:50%;background:var(--p);box-shadow:0 4px 18px rgba(0,0,0,.5);pointer-events:auto;cursor:pointer}
+#ts{position:absolute;left:50%;top:max(80px,calc(env(safe-area-inset-top) + 66px));transform:translateX(-50%);padding:9px 16px;border:1px solid var(--a);background:rgba(20,12,5,.82);border-radius:4px;font:600 14px Rajdhani;letter-spacing:1.5px;color:var(--a);opacity:0;transition:opacity .4s;text-align:center;max-width:90vw}#ts.on{opacity:1}
+#md{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);padding:16px}
+.mdl{width:min(780px,100%);max-height:84vh;overflow:auto;background:rgba(5,17,25,.97);border:1px solid var(--l);border-radius:5px;padding:16px}
+.mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.mh h2{font-size:18px;letter-spacing:2px;color:var(--c)}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:9px}.cd{padding:11px;border:1px solid rgba(105,234,255,.2);background:rgba(13,37,48,.55);border-radius:4px;font-size:14px;line-height:1.5;color:#bdd4d9}.cd h3{font-size:14px;letter-spacing:1px;color:var(--a);margin-bottom:5px}.cd b{color:#fff}
+.sh{grid-column:1/-1;font-size:12px;letter-spacing:2px;color:#8db4bf;margin-top:4px}
+#ld{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.8);font:700 22px Rajdhani;letter-spacing:6px;color:var(--a)}
+#joy,#jb{display:none}.touch #joy{display:block;position:fixed;z-index:7;left:22px;bottom:110px;width:104px;height:104px;border-radius:50%;border:1px solid var(--l);background:rgba(5,18,26,.5);touch-action:none;pointer-events:auto}#joy i{position:absolute;left:34px;top:34px;width:36px;height:36px;border-radius:50%;background:rgba(105,234,255,.35)}.touch #jb{display:block;position:fixed;z-index:7;right:22px;bottom:110px;width:64px;height:64px;border-radius:50%;pointer-events:auto;color:#fff;font:700 14px Rajdhani}
+.wide{grid-column:1/-1}.bars{display:flex;gap:3px;align-items:flex-end;height:74px;margin:8px 0 2px}.bars i{flex:1;background:var(--c);opacity:.5;min-height:3px}.bars i.on{background:var(--a);opacity:1}.bl{display:flex;gap:3px;font-size:11px;color:#8db4bf;margin-bottom:6px}.bl span{flex:1;text-align:center}
+.mdl table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}.mdl td,.mdl th{padding:4px 6px;border-bottom:1px solid rgba(105,234,255,.15);text-align:left}.mdl th{color:#8db4bf;font-weight:600;letter-spacing:1px}.mdl td button{padding:3px 8px}
+@media(max-width:680px){#mm{width:110px;height:110px}.bar button{padding:9px 9px;letter-spacing:1px}.bar small{display:none}.ct{display:none}.hh{gap:7px;font-size:11px}.g{grid-template-columns:1fr}.pill:nth-child(n+2){display:none}}
+</style></head><body>
+<canvas id="w"></canvas>
+<div id="hud"><div id="vig"></div><div class="top"><img class="lg logo" alt="OUTLAND"><div><span class="pill">SOL <b id="sol">001</b></span><span class="pill">LMST <b id="lm">--:--</b></span><span class="pill"><b id="pts">0</b> PTS</span><span class="pill" title="Real one-way radio delay to Earth today">EARTH <b id="dl">--</b></span><button id="pb" class="or" aria-label="Pause">II</button></div></div>
+<div class="ct"><div>ELEVATION<b id="alt">--</b></div><div>POSITION<b id="pos">--</b></div><div>BIOME<b id="bio">--</b></div><div>OBJECTIVE<b id="obj">--</b></div></div><div class="xh"></div><canvas id="mm"></canvas><div id="ts"></div>
+<div class="hh"><span>O₂ <b id="hO"></b></span><span>BAT <b id="hB"></b></span><span>TEMP <b id="hT"></b></span><span>SOL PWR <b id="hS"></b></span><span>STA <b id="hSt"></b></span><span>DUST <b id="hD"></b></span><span id="hBw" hidden>BASE <b id="hBb"></b></span></div>
+<div class="bar"><button id="bScan">ENV SCAN <small>(E)</small></button><button id="bLoc">LOCATIONS <small>(L)</small></button><button id="bFl">LIGHT <small>(F)</small></button><button id="bBase">BASE <small>(B)</small></button></div><div id="joy"><i></i></div><button id="jb" class="or">JUMP</button></div>
+<div id="splash"><img class="lg" alt=""></div>
+<div id="menu"><img class="lg logo" alt="OUTLAND"><nav id="mb"></nav></div>
+<div id="pause"><div class="or"><button id="pc">Continue</button><button id="pl">Locations</button><button id="pe">Env Scan</button><button id="pp">Mission Plan</button><button id="ps">Settings</button><button id="pm">Main Menu</button></div></div>
+<div id="md"><div class="mdl"><div class="mh"><h2 id="mt"></h2><button id="mx" aria-label="Close">×</button></div><div id="mc"></div></div></div><div id="ld">GENERATING TERRAIN…</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script><script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+<script src="3d map/sites.js"></script><script src="3d map/storms.js"></script><script src="3d map/water.js"></script><script src="3d map/traverses.js"></script>
+<script>
+(()=>{"use strict";
+const $=i=>document.getElementById(i),cl=(v,a,b)=>Math.max(a,Math.min(b,v)),R=Math.random,D=Math.PI/180,touch="ontouchstart" in window,EMB=parent!==window;
+// ponytail: text logo; swap in the real OUTLAND logo file (data URI or path) when there is one
+const LOGO="data:image/svg+xml;utf8,"+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='200' height='200'/><circle cx='100' cy='80' r='42' fill='#c1440e'/><path d='M58 80q42 18 84 0' stroke='#7a2a0a' stroke-width='6' fill='none'/><text x='100' y='164' fill='#fff' font-family='Rajdhani,Arial' font-weight='700' font-size='33' text-anchor='middle' letter-spacing='3'>OUTLAND</text></svg>");
+document.querySelectorAll("img.lg").forEach(i=>i.src=LOGO);$("fav").href=LOGO;if(touch)document.body.classList.add("touch");
+const ft=s=>{s=Math.max(0,s|0);return[s/3600|0,s/60%60|0,s%60].map(v=>String(v).padStart(2,"0")).join(":")},fm=m=>m<1e3?m.toFixed(0)+" m":(m/1e3).toFixed(1)+" km",wrap=a=>((a+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI,wrapD=d=>((d+540)%360+360)%360-180;
+// ---------- terrain: real NASA MOLA heights (3d map/sites/<id>.js) with outland's procedural detail and biome colours on top
+// world: x east, z south, metres from the location's arrival point; y = real elevation above the MOLA datum
+const RM=3389500,K=RM*D;let SEED=1337,B=0,SI=null,GF=null,GC=null,latC=0,lonC=0,cosC=1,GE=0,DLT=null;
+const hs=(x,z)=>{let h=Math.imul(x|0,374761393)^Math.imul(z|0,668265263)^SEED;h=Math.imul(h^h>>>13,1274126177);return((h^h>>>16)>>>0)/4294967296},sm=t=>t*t*(3-2*t),ss=(a,b,x)=>sm(cl((x-a)/(b-a),0,1));
+const vn=(x,z)=>{const ix=Math.floor(x),iz=Math.floor(z),fx=sm(x-ix),fz=sm(z-iz),a=hs(ix,iz),b=hs(ix+1,iz),c=hs(ix,iz+1),d=hs(ix+1,iz+1);return a+(b-a)*fx+(c-a)*fz+(a-b-c+d)*fx*fz};
+const fbm=(x,z,o,r)=>{let s=0,a=.5,n=0;for(let i=0;i<o;i++){const v=vn(x,z);s+=a*(r?1-Math.abs(v*2-1):v);n+=a;x=x*2.03+17.1;z=z*2.03+9.7;a*=.5}return s/n};
+const grid=g=>{const b=atob(g.h),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return{...g,h:new Int16Array(u.buffer)}};
+const ll=(x,z)=>[latC-z/K,lonC+x/(K*cosC)],xz=(lat,lon)=>[wrapD(lon-lonC)*K*cosC,(latC-lat)*K];
+// Bilinear height of grid g at lat/lon, or null outside it; sets GE = distance to the grid edge in cells
+function gh(g,lat,lon){const fi=(g.lat0-lat)/g.dlat,fj=wrapD(lon-g.lon0)/g.dlon;GE=Math.min(fi,fj,g.ny-1-fi,g.nx-1-fj);if(GE<0)return null;
+ const i=Math.min(fi|0,g.ny-2),j=Math.min(fj|0,g.nx-2),u=fi-i,v=fj-j,n=g.nx,h=g.h,k=i*n+j;return(h[k]*(1-v)+h[k+1]*v)*(1-u)+(h[k+n]*(1-v)+h[k+n+1]*v)*u}
+// MOLA height at world x/z: the 463 m grid, fading into the 3.7 km grid over its outer 20 cells
+function mola(x,z){const[la,lo]=ll(x,z),f=gh(GF,la,lo),e=GE,c=gh(GC,la,lo);if(f===null)return c??0;return e>=20||c===null?f:c+(f-c)*e/20}
+// biomes: 0 plains 1 dunes 2 craters 3 volcanic 4 canyon 5 delta 6 polar
+const BN=["Dust Plains","Dune Field","Impact Crater","Volcanic Region","Canyon System","Ancient River Delta","Polar Region"],
+BD=["Soft rolling terrain, long sight lines.","Wind-shaped ripples and mobile sand.","Bowl, raised rim and ejecta blanket.","Basalt fields and lava ridges.","Sheer walls exposing layered rock.","Layered sediment fan with erosion channels.","Ice-rich frozen ground."],
+BM=["Iron-oxide dust","Basaltic sand, gypsum","Impact breccia, shocked minerals","Olivine, pyroxene (rare)","Layered sulfates and clays","Clays, carbonates (sample grade)","Water ice, CO₂ frost"];
+// Biome from real terrain: polar above 65° latitude, volcanic above 8 km, canyon where the MOLA slope tops 10°, Jezero's delta fan
+const bioR=(x,z,h,sl)=>Math.abs(latC-z/K)>65?6:h>8000?3:sl>.176?4:DLT&&Math.hypot(x-DLT[0],z-DLT[1])<5000?5:0;
+const crt=(d,r)=>(d<1?-r*.14*(1-d*d):0)+r*.05*Math.exp(-(((d-1)/.2)**2))+(d>1?r*.015*Math.exp(-(d-1)*2):0);
+function terr(x,z){
+ const m=mola(x,z),sl=Math.hypot(mola(x+300,z)-mola(x-300,z),mola(x,z+300)-mola(x,z-300))/600;
+ let h=m+(fbm(x/400,z/400,3)-.5)*14+(fbm(x/55,z/55,3)-.5)*3.2+(vn(x*.8,z*.8)-.5)*.25,b=bioR(x,z,m,sl);
+ if(!b){const wx=x+(fbm(x/600,z/600+7,2)-.5)*300,wz=z+(fbm(x/600+3,z/600,2)-.5)*300,dn=fbm(wx/2500+50,wz/2500,2);if(dn>.56){b=1;h+=ss(.56,.66,dn)*Math.sin((wx*.55+wz*.83+(fbm(wx/90,wz/90,2)-.5)*60)/12)*3*(.4+fbm(wx/260,wz/260,2))}}
+ if(b==3)h+=fbm(x/240,z/240,4,1)*6;else if(b==5)h+=Math.sin(fbm(x/300,z/300,2)*40)*1.5;
+ // ponytail: craters under ~220 m are procedural (below MOLA's 463 m cells); everything larger is real
+ const cs=900,ci=Math.floor(x/cs),cj=Math.floor(z/cs);
+ for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++){if(hs(i*7+1,j*13+2)>.45)continue;const r=25+hs(i,j+99)*85,cx=(i+.25+hs(i+5,j)*.5)*cs,cz=(j+.25+hs(i,j+5)*.5)*cs,d=Math.hypot(x-cx,z-cz)/r;if(d<2.5){if(d<1.3&&b<3)b=2;h+=crt(d,r)}}
+ B=b;return h}
+// ---------- scene (log depth: real vistas reach hundreds of km)
+const cv=$("w"),rd=new THREE.WebGLRenderer({canvas:cv,antialias:true,logarithmicDepthBuffer:true});rd.setPixelRatio(Math.min(devicePixelRatio||1,1.5));rd.toneMapping=THREE.ACESFilmicToneMapping;rd.toneMappingExposure=1.4;
+const SKR=8e5,SKK=SKR/7000,FB=2.5e-5,sc=new THREE.Scene(),cam=new THREE.PerspectiveCamera(70,1,.3,1.5e6),skyC=new THREE.Color(),hemi=new THREE.HemisphereLight(0xffd9bd,0x512414,1),sun=new THREE.DirectionalLight(0xffe8d2,1.4),SD=new THREE.Vector3(),TV=new THREE.Vector3();
+sc.background=skyC;sc.fog=new THREE.FogExp2(0xb66f51,FB);sc.add(hemi,sun,sun.target);
+const rs=()=>{rd.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()};addEventListener("resize",rs);rs();
+const pl={x:0,z:0,yaw:.5,pitch:0,vx:0,vz:0,vy:0,h:0,air:0,k:{},drag:null,joy:{x:0,y:0}},M={t:0,sim:600,o2:28800,bat:68,pts:0,dis:{},sc:{},base:null,dose:0},G={sta:100,tired:false,spr:false,bobT:0,shake:0,b:0,fd:0,gy:0,inS:false,near:false};
+// ---------- terrain material: vertex colour + world-space strata bands on slopes + grain + Mars curvature;
+// uCam = camera position (three r128 gives Lambert materials no cameraPosition); uHole / uCut discard the parts of the MOLA grid meshes that a finer layer already draws
+function patch(s,u){Object.assign(s.uniforms,u);s.vertexShader=s.vertexShader.replace("#include <common>","#include <common>\nvarying vec3 vW;varying float vS;uniform vec3 uCam;").replace("#include <begin_vertex>","#include <begin_vertex>\nvW=(modelMatrix*vec4(position,1.)).xyz;vS=1.-normal.y;vec2 cd=vW.xz-uCam.xz;transformed.y-=dot(cd,cd)/6779000.;");
+ s.fragmentShader=s.fragmentShader.replace("#include <common>","#include <common>\nvarying vec3 vW;varying float vS;uniform vec3 uCam;uniform vec4 uCut;uniform float uHole;float hh(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}").replace("#include <color_fragment>","#include <color_fragment>\nif(distance(vW.xz,uCam.xz)<uHole||all(greaterThan(vW.xz,uCut.xy))&&all(lessThan(vW.xz,uCut.zw)))discard;float st=smoothstep(.2,.55,vS);float bd=sin(vW.y*.9+sin(vW.y*.21)*2.)*.5+.5;diffuseColor.rgb*=1.+st*(bd-.5)*.55*vec3(1.,.8,.6);diffuseColor.rgb*=.88+.24*hh(floor(vW.xz*2.5));")}
+const mk=hole=>{const m=new THREE.MeshLambertMaterial({vertexColors:true}),u={uCam:{value:cam.position},uHole:{value:hole||0},uCut:{value:new THREE.Vector4(1,1,-1,-1)}};m.userData.u=u;m.onBeforeCompile=s=>patch(s,u);return m},MT=[mk(),mk(),mk(),mk()],MF=mk(17000),MCo=mk();
+// ---------- chunk streaming: 4 LOD tiers (48 m / 192 m / 768 m / 3 km) out to ~18 km, skirts hide seams; whole MOLA grids beyond
+const TS=[48,192,768,3072],TR=[5,4,6,6],NQ=24,CH=new Map(),sg=new THREE.Group(),pal=[[.66,.36,.22],[.8,.52,.3],[.52,.28,.19],[.2,.16,.15],[.58,.28,.17],[.62,.45,.34],[.88,.9,.94]];sc.add(sg);
+const IX=(()=>{const a=[],G=NQ+3;for(let j=0;j<G-1;j++)for(let i=0;i<G-1;i++){const p=j*G+i;a.push(p,p+G,p+1,p+1,p+G,p+G+1)}return new Uint16Array(a)})();let rkDirty=false;
+const col=(C,v,p,sl,q)=>{C[v]=(p[0]*(1-sl)+.34*sl)*q;C[v+1]=(p[1]*(1-sl)+.17*sl)*q;C[v+2]=(p[2]*(1-sl)+.11*sl)*q};
+function build(t,ci,cj){const s=TS[t],n=NQ,st=s/n,ox=ci*s,oz=cj*s,W=n+3,H=new Float32Array(W*W),BI=new Uint8Array(W*W);
+ for(let j=0;j<W;j++)for(let i=0;i<W;i++){H[j*W+i]=terr(ox+(i-1)*st,oz+(j-1)*st);BI[j*W+i]=B}
+ const P=new Float32Array(W*W*3),N=new Float32Array(W*W*3),C=new Float32Array(W*W*3),sk=st*1.5+2;
+ for(let gj=0;gj<W;gj++)for(let gi=0;gi<W;gi++){const i=cl(gi-1,0,n),j=cl(gj-1,0,n),k=(j+1)*W+i+1,e=gi==0||gj==0||gi==W-1||gj==W-1,v=(gj*W+gi)*3,dx=H[k+1]-H[k-1],dz=H[k+W]-H[k-W],l=Math.hypot(dx,2*st,dz),ny=2*st/l,x=ox+i*st,z=oz+j*st;
+  P[v]=i*st;P[v+1]=H[k]-(e?sk:0);P[v+2]=j*st;N[v]=-dx/l;N[v+1]=ny;N[v+2]=-dz/l;col(C,v,pal[BI[k]],ss(.2,.6,1-ny),.82+.36*fbm(x/(st*12),z/(st*12),2))}
+ const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.BufferAttribute(P,3));g.setAttribute("normal",new THREE.BufferAttribute(N,3));g.setAttribute("color",new THREE.BufferAttribute(C,3));g.setIndex(new THREE.BufferAttribute(IX,1));
+ g.computeBoundingSphere();g.boundingSphere.radius+=60; // room for the curvature drop (< 50 m within 18 km), so off-screen chunks are culled
+ const m=new THREE.Mesh(g,MT[t]);m.position.set(ox,-[0,1.2,5,12][t],oz);m.matrixAutoUpdate=false;m.updateMatrix();sg.add(m);let rk=null;
+ if(t==0){rk=[];const cnt=[16,5,26,32,22,24,5][BI[(n/2+1)*W+n/2+1]];
+  for(let q=0;q<cnt;q++){const r1=hs(ci*31+q,cj*17+7),r2=hs(ci+q*5,cj*11+3),r3=hs(ci*3+q,cj+q*7+1),x=ox+r1*s,z=oz+r2*s,y=terr(x,z),bb=B,sl=Math.hypot(terr(x+1.5,z)-y,terr(x,z+1.5)-y)/1.5;
+   // 0 small · 1 boulder · 2 outcrop · 3 cliff debris · 4 volcanic · 5 meteor fragment
+   let c=r3<.55?0:r3<.8?1:r3<.88?2:r3<.95?(sl>.3?3:0):(bb==3?4:5);if(c==2&&(bb==0||bb==1))c=1;
+   rk.push([c,x,y,z,[.12+r1*r2*.5,.6+r2*r3,3+r1*5,.8+r3*1.4,.5+r1*1.3,.12+r2*.35][c],r1*6.28])}}
+ return{m,g,rk}}
+function stream(all){const px=pl.x,pz=pl.z,w=new Map();let rc=null;
+ for(let t=0;t<TS.length;t++){const s=TS[t],cx=Math.floor(px/s),cz=Math.floor(pz/s),r=TR[t],pr=rc;rc=[(cx-r)*s,(cx+r+1)*s,(cz-r)*s,(cz+r+1)*s];
+  for(let i=cx-r;i<=cx+r;i++)for(let j=cz-r;j<=cz+r;j++){if(pr&&i*s>=pr[0]&&(i+1)*s<=pr[1]&&j*s>=pr[2]&&(j+1)*s<=pr[3])continue;w.set(t+":"+i+":"+j,[t,i,j,Math.hypot((i+.5)*s-px,(j+.5)*s-pz)+t*300])}}
+ for(const[k,c]of CH)if(!w.has(k)){sg.remove(c.m);c.g.dispose();CH.delete(k);rkDirty=true}
+ const q=[...w].filter(([k])=>!CH.has(k)).sort((a,b)=>a[1][3]-b[1][3]),t0=performance.now();let nb=0;
+ for(const[k,v]of q){if(!all&&nb>0&&(nb>=2||performance.now()-t0>6))break;CH.set(k,build(v[0],v[1],v[2]));nb++;rkDirty=true}return q.length-nb}
+// One mesh of a whole MOLA grid (real heights, outland colours, no detail), lowered by dy so the finer layers draw over it
+function gridMesh(g,mat,dy){const n=g.nx,m=g.ny,P=new Float32Array(n*m*3),C=new Float32Array(n*m*3),I=new Uint32Array((n-1)*(m-1)*6);let t=0;
+ for(let i=0;i<m;i++)for(let j=0;j<n;j++){const v=(i*n+j)*3,[x,z]=xz(g.lat0-i*g.dlat,g.lon0+j*g.dlon);P[v]=x;P[v+1]=g.h[i*n+j];P[v+2]=z}
+ for(let i=0;i<m-1;i++)for(let j=0;j<n-1;j++){const a=i*n+j;I[t++]=a;I[t++]=a+n;I[t++]=a+1;I[t++]=a+1;I[t++]=a+n;I[t++]=a+n+1}
+ const ge=new THREE.BufferGeometry();ge.setAttribute("position",new THREE.BufferAttribute(P,3));ge.setIndex(new THREE.BufferAttribute(I,1));ge.computeVertexNormals();const N=ge.attributes.normal.array;
+ for(let v=0;v<n*m*3;v+=3){const ny=N[v+1];col(C,v,pal[bioR(P[v],P[v+2],P[v+1],Math.sqrt(1-ny*ny)/ny)],ss(.2,.6,1-ny),.82+.36*fbm(P[v]/4000,P[v+2]/4000,2))}
+ ge.setAttribute("color",new THREE.BufferAttribute(C,3));const me=new THREE.Mesh(ge,mat);me.position.y=dy;me.matrixAutoUpdate=false;me.updateMatrix();me.frustumCulled=false;sc.add(me);return me}
+// ---------- rocks: 6 categories, irregular low-poly, instanced; big ones collide
+const RC=[0x6b3f2c,0x5e3524,0x7a4a34,0x55332a,0x2b2523,0x3c3c40],RY=[.7,.8,1.5,.6,.8,.7],CAP=2600,RMs=[],ico=new THREE.IcosahedronGeometry(1,1),ip=ico.attributes.position;
+for(let i=0;i<ip.count;i++){const x=ip.getX(i),y=ip.getY(i),z=ip.getZ(i),k=.78+.3*Math.sin(x*3.1+1.3)*Math.cos(y*2.6+.4)+.2*Math.sin(z*4.1+x*2);ip.setXYZ(i,x*k,y*k,z*k)}ico.computeVertexNormals();
+for(let c=0;c<6;c++){const m=new THREE.InstancedMesh(ico,new THREE.MeshLambertMaterial({color:RC[c]}),CAP);m.count=0;m.frustumCulled=false;sc.add(m);RMs.push(m)}
+function rkBuild(){const cnt=[0,0,0,0,0,0],o=new THREE.Object3D();for(const c of CH.values())if(c.rk)for(const r of c.rk){const k=r[0];if(cnt[k]>=CAP)continue;o.position.set(r[1],r[2]+r[4]*.18,r[3]);o.rotation.set(0,r[5],0);o.scale.set(r[4],r[4]*RY[k],r[4]);o.updateMatrix();RMs[k].setMatrixAt(cnt[k]++,o.matrix)}RMs.forEach((m,k)=>{m.count=cnt[k];m.instanceMatrix.needsUpdate=true})}
+// Big rocks, rovers and landers are solid
+function blocked(x,z){for(const c of CR)if(Math.hypot(x-c[0].position.x,z-c[0].position.z)<c[1]+.4)return 1;const s=TS[0],ci=Math.floor(x/s),cj=Math.floor(z/s);for(let i=ci-1;i<=ci+1;i++)for(let j=cj-1;j<=cj+1;j++){const c=CH.get("0:"+i+":"+j);if(c&&c.rk)for(const r of c.rk)if(r[0]!=0&&r[0]!=5&&Math.hypot(x-r[1],z-r[3])<r[4]*.85+.5)return 1}return 0}
+// ---------- sky: Milky Way band, sun glow, Phobos & Deimos (beyond the farthest terrain)
+const sp=[];for(let i=0;i<2600;i++){let u,a=R()*6.283;if(i<1500)u=(R()+R()+R()-1.5)*.18;else u=R()*2-1;const r=Math.sqrt(1-u*u);sp.push(r*Math.cos(a)*SKR,u*SKR,r*Math.sin(a)*SKR)}
+const sgm=new THREE.BufferGeometry();sgm.setAttribute("position",new THREE.Float32BufferAttribute(sp,3));const starM=new THREE.PointsMaterial({color:0xffffff,size:1.7,sizeAttenuation:false,transparent:true,opacity:0,fog:false,depthWrite:false}),stars=new THREE.Points(sgm,starM);stars.rotation.set(.9,0,.6);stars.frustumCulled=false;sc.add(stars);
+const radial=(stops)=>{const c=document.createElement("canvas");c.width=c.height=128;const g=c.getContext("2d"),r=g.createRadialGradient(64,64,0,64,64,64);stops.forEach(s=>r.addColorStop(s[0],s[1]));g.fillStyle=r;g.fillRect(0,0,128,128);return new THREE.CanvasTexture(c)};
+const gt=radial([[0,"rgba(255,248,230,1)"],[.12,"rgba(255,235,200,.95)"],[.3,"rgba(255,190,130,.35)"],[1,"rgba(255,160,100,0)"]]),dTx=radial([[0,"rgba(255,255,255,.9)"],[1,"rgba(255,255,255,0)"]]);
+const sunS=new THREE.Sprite(new THREE.SpriteMaterial({map:gt,fog:false,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));sunS.scale.set(1200*SKK,1200*SKK,1);sc.add(sunS);
+const ph=new THREE.Mesh(new THREE.SphereGeometry(16*SKK,14,10),new THREE.MeshBasicMaterial({color:0x9b887b,fog:false})),de=new THREE.Mesh(new THREE.SphereGeometry(9*SKK,12,8),new THREE.MeshBasicMaterial({color:0xb6a393,fog:false}));ph.scale.set(1.25,.85,1);sc.add(ph,de);
+// ---------- rovers and landers at their real positions; Perseverance and Curiosity where NASA's latest waypoint puts them (traverses.js)
+const part=(g,geo,c,x,y,z)=>{const m=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({color:c}));m.position.set(x,y,z);g.add(m);return m};
+// NASA 3D Resources models (3d map/models, as the 3D map uses), each loaded on first use and scaled to the craft's real span;
+// the primitive stand-ins inside the group stay if a model is missing
+const GL=new THREE.GLTFLoader(),MDL={};let WEAR=[];
+{const d=new THREE.DRACOLoader();d.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/gltf/");GL.setDRACOLoader(d)}
+function wear(g,name,len){Object.assign(g.userData,{mdl:name,len});WEAR.push(g);
+ if(!(name in MDL)){MDL[name]=null;GL.load("3d map/models/"+encodeURIComponent(name)+".glb",x=>{MDL[name]=x.scene;WEAR.forEach(dress)},undefined,e=>console.warn(name+" model failed to load, keeping primitives",e))}dress(g);return g}
+function dress(g){const src=MDL[g.userData.mdl];if(!src||g.userData.dressed)return;const m=src.clone(true);m.updateMatrixWorld(true);const b=new THREE.Box3().setFromObject(m),s=b.getSize(new THREE.Vector3()),k=g.userData.len/Math.max(s.x,s.z);
+ m.scale.setScalar(k);m.position.set(-(b.min.x+b.max.x)/2*k,-b.min.y*k,-(b.min.z+b.max.z)/2*k);g.children.forEach(c=>c.visible=false);g.add(m);g.userData.dressed=1}
+// Rovers wear NASA's Perseverance model at each rover's real length; plain boxes stand in until it has loaded
+function rover(len){const g=new THREE.Group(),s=len/3;part(g,new THREE.BoxGeometry(2.4*s,.8*s,3*s),0xd8d9d2,0,1.4*s,0);part(g,new THREE.CylinderGeometry(.06*s,.08*s,1.6*s,6),0xbac4c2,0,2.6*s,-s);part(g,new THREE.BoxGeometry(.5*s,.35*s,.4*s),0x253c47,0,3.5*s,-s);
+ for(const x of[-1.4,1.4])for(const z of[-1.1,0,1.1])part(g,new THREE.CylinderGeometry(.45*s,.45*s,.3*s,10),0x242b2d,x*s,.5*s,z*s).rotation.z=1.5708;return wear(g,"Mars 2020 Perseverance Rover",len)}
+// Three-legged stand-in for Viking and InSight / Phoenix until their NASA models load
+function lander(){const g=new THREE.Group();part(g,new THREE.CylinderGeometry(1.1,1.1,.6,6),0xd8d9d2,0,1.3,0);part(g,new THREE.BoxGeometry(2.4,.05,.9),0x253c47,0,1.62,1.5);part(g,new THREE.ConeGeometry(.6,.3,10),0x9aa4a6,0,1.95,0).rotation.x=Math.PI;
+ for(let i=0;i<3;i++){const a=i*2.094,l=part(g,new THREE.CylinderGeometry(.05,.05,1.5,5),0xbac4c2,Math.cos(a)*1.25,.65,Math.sin(a)*1.25);l.rotation.set(Math.sin(a)*.45,0,-Math.cos(a)*.45)}return g}
+// Solar-cell texture: dark cells in a light frame, 4 cells per metre on extruded slab tops (their UVs are in metres)
+const cellTx=(()=>{const c=document.createElement("canvas");c.width=c.height=64;const g=c.getContext("2d");g.fillStyle="#1b2433";g.fillRect(0,0,64,64);g.strokeStyle="#6a7a8c";g.lineWidth=3;g.strokeRect(0,0,64,64);g.strokeStyle="#2c3a4e";g.lineWidth=1;
+ for(const v of[21,42]){g.beginPath();g.moveTo(v,2);g.lineTo(v,62);g.stroke()}const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(4,4);return t})();
+// Flat slab with corners pts ([x,z]), d thick, top at height y, in group g; mat is one material or [top/bottom, sides]
+function slab(g,pts,d,y,mat){const s=new THREE.Shape();pts.forEach(([x,z],i)=>i?s.lineTo(x,-z):s.moveTo(x,-z));const ge=new THREE.ExtrudeGeometry(s,{depth:d,bevelEnabled:false});ge.rotateX(-Math.PI/2);const m=new THREE.Mesh(ge,mat);m.position.y=y-d;g.add(m);return m}
+const LM=c=>new THREE.MeshLambertMaterial({color:c});
+// Dusty honeycomb-panel texture for lander petals: 0.5 m panels with darker seams (UVs in metres, as for cellTx)
+const panTx=(()=>{const c=document.createElement("canvas");c.width=c.height=64;const g=c.getContext("2d");g.fillStyle="#cdc3af";g.fillRect(0,0,64,64);g.strokeStyle="#9f9580";g.lineWidth=3;g.strokeRect(0,0,64,64);g.strokeStyle="#b8ae99";g.lineWidth=1;
+ for(const v of[16,32,48]){g.beginPath();g.moveTo(v,0);g.lineTo(v,64);g.moveTo(0,v);g.lineTo(64,v);g.stroke()}const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(2,2);return t})();
+// Pathfinder (sol) and Spirit / Opportunity landers as they sit today: the tetrahedral lander opened flat into a triangle of side 2a
+// (base + 3 thin petals) with its deflated airbags as low rumpled lobes poking out all along the rim; Pathfinder's petals carry
+// solar cells and its base the camera mast and high-gain dish; the MER base keeps the rover's cradle rails and fabric egress ramps
+function petals(a,sol){const g=new THREE.Group(),R=a/Math.sqrt(3),V=[0,1,2].map(i=>[R*Math.cos(1.5708+i*2.0944),R*Math.sin(1.5708+i*2.0944)]),frame=LM(0x9d9584),pan=new THREE.MeshLambertMaterial({map:panTx}),top=sol?new THREE.MeshLambertMaterial({map:cellTx}):pan,bag=[LM(0xd9d1c1),LM(0xc2b8a5)],T=[];
+ slab(g,V,.2,.32,[top,frame]);
+ for(let i=0;i<3;i++){const p=V[i],q=V[(i+1)%3],o=V[(i+2)%3],t=[p[0]+q[0]-o[0],p[1]+q[1]-o[1]];T.push(t);slab(g,[p,q,t],.05,.1,[top,frame])}
+ for(let i=0;i<3;i++){const p=T[i],q=T[(i+1)%3],n=Math.ceil(Math.hypot(q[0]-p[0],q[1]-p[1])/.26);
+  for(let k=0;k<=n;k++){const f=k/n,x=p[0]+(q[0]-p[0])*f,z=p[1]+(q[1]-p[1])*f,l=Math.hypot(x,z),h=hs(k*7+i,i*13+3),o=.08+.1*h,b=new THREE.Mesh(ico,bag[k%2]);
+   b.position.set(x+x/l*o,.05+.04*h,z+z/l*o);b.scale.set(.2+.12*h,.08+.06*h,.16+.1*h);b.rotation.set(h,Math.atan2(x,z)+k,0);g.add(b)}}
+ if(sol){part(g,new THREE.CylinderGeometry(.03,.03,.95,8),0xc7ccd0,.15,.8,0);const h=part(g,new THREE.BoxGeometry(.28,.13,.15),0x3a3f44,.15,1.32,0);part(h,new THREE.CylinderGeometry(.035,.035,.05,10),0x0b0d10,-.07,0,.08).rotation.x=1.5708;part(h,new THREE.CylinderGeometry(.035,.035,.05,10),0x0b0d10,.07,0,.08).rotation.x=1.5708;
+  part(g,new THREE.CylinderGeometry(.02,.02,.3,6),0xc7ccd0,-.35,.47,.1);part(g,new THREE.SphereGeometry(.2,16,6,0,6.2832,0,.9),0xe4e1da,-.35,.65,.1).material.side=THREE.DoubleSide;part(g,new THREE.CylinderGeometry(.012,.012,.7,5),0x9aa0a4,.25,.67,-.3)}
+ else{for(const s of[-.32,.32])part(g,new THREE.BoxGeometry(.06,.08,a*.55),0x5f5c57,s,.36,0);part(g,new THREE.BoxGeometry(.42,.12,.32),0x77736c,0,.38,-.15);
+  const x=(V[1][0]+V[2][0])/2,z=(V[1][1]+V[2][1])/2,l=Math.hypot(x,z),dx=x/l,dz=z/l;for(const s of[-.35,.35])part(g,new THREE.BoxGeometry(.32,.015,a*.9),0x8f8a80,x+dx*a*.45-dz*s,.115,z+dz*a*.45+dx*s).rotation.y=Math.atan2(dx,dz)}
+ return g}
+// Lander builders by CRAFT kind (len = real span in m for NASA models; Viking's 3.9 m includes its sampler arm, giving its real 2.1 m height) and how far you are kept from each
+// ponytail: Phoenix wears the InSight model; both are Lockheed's Mars Surveyor 2001 lander design
+const LND={V:()=>wear(lander(),"Viking Lander",3.9),I:len=>wear(lander(),"InSight Lander",len),P:()=>petals(1.5,1),M:()=>petals(2,0)},LRAD={V:1.6,I:2.6,P:1.8,M:2.3};
+// [name, kind: R rover, V Viking, I InSight-type, P Pathfinder, M MER platform, lat, lon, span m, traverses.js key: its latest NASA waypoint replaces lat/lon]
+const CRAFT=[["Perseverance rover","R",0,0,3,"M20"],["Curiosity rover","R",0,0,2.9,"MSL"],["Viking 1 lander","V",22.27,-47.95],["Viking 2 lander","V",47.64,134.29],["Pathfinder lander","P",19.13,-33.22],["Sojourner rover","R",19.1301,-33.2201,.65],
+ ["Spirit's landing platform","M",-14.5684,175.4726],["Opportunity's landing platform","M",-1.9462,-5.5266],["Phoenix lander","I",68.22,-125.7,5.5],["InSight lander","I",4.502,135.623,6],
+ ];
+let CR=[];
+// Craft inside this location's fine grid: [mesh, collision radius m, traverse key or null]; a NASA-tracked rover faces along its last drive
+function placeCraft(){CR.forEach(c=>sc.remove(c[0]));CR=[];WEAR=[];
+ for(const[n,k,la,lo,len,key]of CRAFT){let a=la,b=lo,hd=0;if(key){const t=TRAVERSES[key].pts,i=t.length-2;a=t[i+1];b=t[i];let j=i;while(j>1&&t[j]==t[i]&&t[j+1]==t[i+1])j-=2;const[x0,z0]=xz(t[j+1],t[j]),[x1,z1]=xz(a,b);hd=Math.atan2(-(x1-x0),-(z1-z0))}
+  if(gh(GF,a,b)===null)continue;const m=k=="R"?rover(len):LND[k](len),[x,z]=xz(a,b);m.position.set(x,terr(x,z),z);m.rotation.y=hd;m.userData.name=n;sc.add(m);CR.push([m,k=="R"?len*.6:LRAD[k],key||null])}}
+// ---------- props: beacons on points of interest, real dust storms (MDAD, storms.js), kicked-up dust
+const bGeo=new THREE.CylinderGeometry(2.5,2.5,900,6),bMat=new THREE.MeshBasicMaterial({color:0x69eaff,transparent:true,opacity:.55,fog:false});let POI=[],fineM=null,coarseM=null;
+const baseB=new THREE.Mesh(bGeo,new THREE.MeshBasicMaterial({color:0xffb45c,transparent:true,opacity:.75,fog:false}));baseB.visible=false;sc.add(baseB);
+const STM=[],cyl=new THREE.CylinderGeometry(1,1,1,48,1,true);for(let i=0;i<6;i++){const m=new THREE.Mesh(cyl,new THREE.MeshBasicMaterial({color:0xc98a63,transparent:true,opacity:.3,side:THREE.DoubleSide,depthWrite:false,fog:false}));m.visible=false;sc.add(m);STM.push(m)}
+// Storm replay date T (MDAD units: (MY-24)*360 + Ls), one Mars sol per mission sol, starting at MY28 Ls 255 like mission control
+const Ts=STORMS[0][0],T0=4*360+255,Tn=STORMS[STORMS.length-1][0],WX={T:0,act:[],inS:null,near:null},myLs=T=>"MY"+(24+Math.floor(T/360))+" Ls "+(T%360).toFixed(0)+"°";
+// Storms observed at the replay date, nearest edge first (d = km from you to the storm edge, negative = inside); the 6 nearest within 1500 km are drawn as dust walls
+function wxUpd(){const T=WX.T=Ts+(T0-Ts+M.sim/1800*360/668.6)%(Tn-Ts),[la,lo]=ll(pl.x,pl.z);
+ WX.act=stormsAt(T).map(s=>({lat:s[2],lon:s[1],r:s[3],id:s[4],d:marsKm(la,lo,s[2],s[1])-s[3]})).sort((a,b)=>a.d-b.d);WX.inS=WX.act.find(s=>s.d<0)||null;WX.near=WX.act.find(s=>s.d<300)||null;
+ STM.forEach((m,i)=>{const s=WX.act[i];m.visible=!!s&&s.d<1500;if(m.visible){const[x,z]=xz(s.lat,s.lon);m.position.set(x,G.gy+1e4,z);m.scale.set(s.r*1e3,4e4,s.r*1e3)}})}
+const NP=90,pg=new THREE.BufferGeometry(),pp=new Float32Array(NP*3).fill(-1e5),pv=new Float32Array(NP*3),pf=new Float32Array(NP);pg.setAttribute("position",new THREE.BufferAttribute(pp,3));
+const pts=new THREE.Points(pg,new THREE.PointsMaterial({map:dTx,color:0xc58a66,size:.5,transparent:true,opacity:.55,depthWrite:false}));pts.frustumCulled=false;sc.add(pts);let pi=0;
+function puff(n,p){const y=G.gy+.2;for(let i=0;i<n;i++){const j=pi++%NP,a=R()*6.283,s=(.6+R())*p,k=j*3;pp[k]=pl.x;pp[k+1]=y;pp[k+2]=pl.z;pv[k]=Math.cos(a)*s;pv[k+1]=(.4+R())*p*.6;pv[k+2]=Math.sin(a)*s;pf[j]=1.2+R()}}
+function pUpd(dt){for(let j=0;j<NP;j++)if(pf[j]>0){pf[j]-=dt;const k=j*3;pp[k]+=pv[k]*dt;pp[k+1]+=pv[k+1]*dt;pp[k+2]+=pv[k+2]*dt;pv[k+1]-=2.2*dt;pv[k]*=.985;pv[k+2]*=.985;if(pf[j]<=0)pp[k+1]=-1e5}pg.attributes.position.needsUpdate=true}
+// ---------- audio: thin Mars wind, crunchy steps (WebAudio, no files)
+const A={c:null,on:true,init(){try{if(!this.c){const c=this.c=new(window.AudioContext||window.webkitAudioContext)(),b=c.createBuffer(1,c.sampleRate*2,c.sampleRate),o=b.getChannelData(0);for(let i=0;i<o.length;i++)o[i]=R()*2-1;this.n=b;const s=c.createBufferSource(),f=c.createBiquadFilter(),g=this.wg=c.createGain();s.buffer=b;s.loop=true;f.type="lowpass";f.frequency.value=380;g.gain.value=0;s.connect(f);f.connect(g);g.connect(c.destination);s.start()}if(this.c.state=="suspended")this.c.resume()}catch(e){this.c=null}},
+ burst(f,v,d){const c=this.c;if(!c||!this.on)return;const s=c.createBufferSource(),fl=c.createBiquadFilter(),g=c.createGain(),t=c.currentTime;s.buffer=this.n;fl.frequency.value=f;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(fl);fl.connect(g);g.connect(c.destination);s.start(t);s.stop(t+d)},wind(v){if(this.wg)this.wg.gain.value=this.on?v:0}};
+// ---------- day / night / atmosphere
+const NI=new THREE.Color(0x04070d),DY=new THREE.Color(0xb67a56),DU=new THREE.Color(0x6a86a8),SM=new THREE.Color(0x6b4a35),EV={se:1,dk:1};let fogD=FB;
+// Local solar time (h) at longitude lon on mission control's clock (one sol = 1800 s, midnight at Jezero when M.sim = 0)
+const lmst=lon=>(((M.sim/1800)*24+(lon-77.4508)/15)%24+24)%24;
+// SD = unit vector to the Sun in world axes (x east, y up, z south), placed as mission control's sunAt places it on the globe:
+// declination from the replay date's season Ls and Mars's 25.19° tilt, hour angle from the local solar time at this site
+function sunDir(){const dec=Math.asin(Math.sin(25.19*D)*Math.sin((WX.T%360)*D)),H=(lmst(lonC)-12)*15*D,p=latC*D;
+ SD.set(-Math.cos(dec)*Math.sin(H),Math.sin(p)*Math.sin(dec)+Math.cos(p)*Math.cos(dec)*Math.cos(H),Math.sin(p)*Math.cos(dec)*Math.cos(H)-Math.cos(p)*Math.sin(dec))}
+function env(inS,near){sunDir();const se=SD.y,dk=cl(se*3+.35,0,1),gl=cl(1-Math.abs(se)*4,0,1)*(se>-.25?1:0);
+ sun.position.copy(cam.position).addScaledVector(SD,600);sun.target.position.copy(cam.position);sun.intensity=1.5*cl(se*3,0,1)+.03;hemi.intensity=.12+.9*dk;
+ skyC.copy(NI).lerp(DY,dk).lerp(DU,gl*.45);if(inS)skyC.lerp(SM,.65);else if(near)skyC.lerp(SM,.2);sc.fog.color.copy(skyC);
+ fogD+=((inS?.0008:near?.0001:0)+FB*(1+(1-dk)*.25)-fogD)*.04;sc.fog.density=fogD;
+ stars.position.copy(cam.position);starM.opacity=cl(1-dk*1.7,0,1)*(inS?.1:1);sunS.position.copy(cam.position).addScaledVector(SD,SKR*.95);sunS.visible=se>-.12&&!inS;
+ [[ph,.01126,0],[de,.00284,2]].forEach(([o,w,p])=>{const t=M.sim*w+p;o.position.copy(cam.position).add(TV.set(Math.cos(t),Math.sin(t)*.9,Math.sin(t)*.35).normalize().multiplyScalar(SKR*.9))});EV.se=se;EV.dk=dk}
+// ---------- minimap: north-up, 10 km around you (M or a click zooms out to 50 km) on the real MOLA shaded relief; beacons (dim once found, pinned to the rim when
+// farther), craft, observed dust storms, base camp with a dashed line back to it, and you as an arrow in the middle
+const mm=$("mm"),mg=mm.getContext("2d");let MMR=1e4,mmBg=null;const mmZoom=()=>MMR=MMR>1e4?1e4:5e4;mm.onclick=mmZoom;mm.width=mm.height=Math.round(180*Math.min(devicePixelRatio||1,2));
+// Shaded relief of grid g, one pixel per MOLA cell: lit from the north-west, dark brown in the lows to pale tan on the highs
+function mmBake(g){const n=g.nx,m=g.ny,h=g.h,c=document.createElement("canvas");c.width=n;c.height=m;const x=c.getContext("2d"),im=x.createImageData(n,m),d=im.data,sx=g.dlon*K*cosC,sz=g.dlat*K;let lo=1e9,hi=-1e9;for(const v of h){if(v<lo)lo=v;if(v>hi)hi=v}
+ for(let i=0;i<m;i++)for(let j=0;j<n;j++){const dx=(h[i*n+Math.min(j+1,n-1)]-h[i*n+Math.max(j-1,0)])/(2*sx),dz=(h[Math.min(i+1,m-1)*n+j]-h[Math.max(i-1,0)*n+j])/(2*sz),s=cl(.75+(dx+dz)*4,.25,1.35),e=(h[i*n+j]-lo)/(hi-lo||1),p=(i*n+j)*4;
+  d[p]=cl((70+144*e)*s,0,255);d[p+1]=cl((32+118*e)*s,0,255);d[p+2]=cl((20+84*e)*s,0,255);d[p+3]=255}
+ x.putImageData(im,0,0);return c}
+function mmDraw(){if(!mmBg)return;const W=mm.width,c=W/2,k=c/MMR,g=mg,sx=GF.dlon*K*cosC,sz=GF.dlat*K,[x0,z0]=xz(GF.lat0,GF.lon0),u=W/180;
+ g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,W,W);g.save();g.beginPath();g.arc(c,c,c,0,6.2832);g.clip();
+ g.setTransform(k*sx,0,0,k*sz,c+(x0-pl.x-sx/2)*k,c+(z0-pl.z-sz/2)*k);g.drawImage(mmBg,0,0);g.setTransform(1,0,0,1,0,0);
+ const at=(x,z,r)=>{let X=(x-pl.x)*k,Z=(z-pl.z)*k;const l=Math.hypot(X,Z),e=c-r-2*u;if(l>e){X*=e/l;Z*=e/l}return[c+X,c+Z]},dot=(p,r,f)=>{g.fillStyle=f;g.beginPath();g.arc(p[0],p[1],r,0,6.2832);g.fill()};
+ g.lineWidth=2*u;g.strokeStyle="rgba(255,180,92,.8)";WX.act.forEach(s=>{if(s.d>MMR/1e3)return;const[x,z]=xz(s.lat,s.lon);g.beginPath();g.arc(c+(x-pl.x)*k,c+(z-pl.z)*k,s.r*1e3*k,0,6.2832);g.stroke()});
+ CR.forEach(q=>dot(at(q[0].position.x,q[0].position.z,3*u),3*u,"#fff"));
+ const rt=G.bs&&G.bs.w.route;if(rt){g.setLineDash([4*u,4*u]);g.beginPath();rt.forEach(([x,z],i)=>g[i?"lineTo":"moveTo"](c+(x-pl.x)*k,c+(z-pl.z)*k));g.stroke();g.setLineDash([])}
+ if(G.bs){const b=at(M.base[1],M.base[2],5*u);g.fillStyle="#ffb45c";g.fillRect(b[0]-4*u,b[1]-4*u,8*u,8*u)}
+ POI.forEach((p,i)=>dot(at(p[3],p[4],4*u),4*u,M.dis[SI.id+i]?"rgba(105,234,255,.35)":"#69eaff"));
+ g.translate(c,c);g.rotate(-pl.yaw);g.fillStyle="#ffb45c";g.strokeStyle="#000";g.lineWidth=u;g.beginPath();g.moveTo(0,-9*u);g.lineTo(6*u,7*u);g.lineTo(0,3*u);g.lineTo(-6*u,7*u);g.closePath();g.fill();g.stroke();
+ g.restore();g.fillStyle="#e5f7fa";g.font=`700 ${13*u}px Rajdhani`;g.textAlign="center";g.fillText("N",c,15*u);g.fillText(MMR/1e3+" km",c,W-8*u)}
+// ---------- flashlight (F / LIGHT button): a spotlight from your head along your view, costing a little battery; it stays in the
+// scene and is switched by intensity, so toggling it does not recompile every material
+const FL=new THREE.SpotLight(0xfff1dc,0,70,.42,.45,1.3);sc.add(FL,FL.target);let flOn=false;
+function flash(){flOn=!flOn;FL.intensity=flOn?1.8:0;$("bFl").firstChild.textContent=flOn?"LIGHT ON ":"LIGHT ";toast(flOn?"FLASHLIGHT ON":"FLASHLIGHT OFF")}
+// ---------- mission planning: base camp walk-back, radiation, Earth link, dust season, human base ranking
+// Air pressure (Pa) and surface radiation dose (mSv per sol, scaled from Curiosity RAD's 0.67 at ~850 Pa) at elevation h
+const pres=h=>610*Math.exp(-h/11100),rad=h=>.67*Math.sqrt(850/pres(h));
+// Walking time (s) from (x0, z0) to (x1, z1) along the straight line over MOLA, at sim()'s walking speed and uphill slowdown
+function line(x0,z0,x1,z1){const d=Math.hypot(x1-x0,z1-z0),n=Math.min(40,Math.max(1,Math.ceil(d/25))),st=d/n;let t=0,h0=mola(x0,z0);
+ for(let i=1;i<=n;i++){const h=mola(x0+(x1-x0)*i/n,z0+(z1-z0)*i/n),up=(h-h0)/st;t+=st/(5.5*Math.max(up>0?1-Math.atan(up)/D/32:1,.05));h0=h}return t}
+// Fine MOLA grid cell at lat/lon (-1 outside it), and a cell's centre in world x/z
+const cellOf=(la,lo)=>{const i=Math.round((GF.lat0-la)/GF.dlat),j=Math.round(wrapD(lo-GF.lon0)/GF.dlon);return i<0||j<0||i>=GF.ny||j>=GF.nx?-1:i*GF.nx+j},
+ cxz=c=>xz(GF.lat0-(c/GF.nx|0)*GF.dlat,GF.lon0+c%GF.nx*GF.dlon);
+// Fastest walking time T (s) from every fine MOLA cell to base camp at (bx, bz): Dijkstra over 8 neighbours with sim()'s walking speed and
+// uphill slowdown, steps of 32° and steeper impassable; nx = next cell on the route toward base (-1 at base or unreachable), b = base cell
+function field(bx,bz,key){const g=GF,n=g.nx,m=g.ny,h=g.h,T=new Float64Array(n*m).fill(Infinity),nx=new Int32Array(n*m).fill(-1),sx=g.dlon*K*cosC,sz=g.dlat*K,b=cellOf(...ll(bx,bz)),
+ NB=[-1,0,1].flatMap(a=>[-1,0,1].filter(c=>a||c).map(c=>[a,c,Math.hypot(a*sz,c*sx)])),hk=[],hv=[];
+ const push=(k,v)=>{let i=hk.length;hk.push(k);hv.push(v);while(i){const p=(i-1)>>1;if(hk[p]<=k)break;hk[i]=hk[p];hv[i]=hv[p];i=p}hk[i]=k;hv[i]=v},
+  pop=()=>{const v=hv[0],k=hk.pop(),w=hv.pop(),L=hk.length;if(L){let i=0;for(;;){let c=2*i+1;if(c>=L)break;if(c+1<L&&hk[c+1]<hk[c])c++;if(hk[c]>=k)break;hk[i]=hk[c];hv[i]=hv[c];i=c}hk[i]=k;hv[i]=w}return v};
+ if(b>=0){T[b]=0;push(0,b)}
+ while(hk.length){const t0=hk[0],u=pop();if(t0>T[u])continue;const i=u/n|0,j=u%n;
+  for(const[di,dj,L]of NB){const a=i+di,c=j+dj;if(a<0||c<0||a>=m||c>=n)continue;const v=a*n+c,up=(h[u]-h[v])/L,sf=up>0?1-Math.atan(up)/D/32:1;if(sf<=0)continue;const t=t0+L/(5.5*sf);if(t<T[v]){T[v]=t;nx[v]=u;push(t,v)}}}
+ return{key,T,nx,b}}
+let BF=null;
+// Walk back to base camp (bx, bz) from you: t = time (s, Infinity when no walkable route), route = world [x, z] points from you to base
+// along the fastest path over real terrain (straight within one grid cell, or beyond the fine grid), len = its length (m)
+function walkBack(bx,bz){const key=M.base.join();if(!BF||BF.key!=key)BF=field(bx,bz,key);const c=cellOf(...ll(pl.x,pl.z)),me=[pl.x,pl.z];
+ if(c<0||c==BF.b||BF.b<0)return{t:line(pl.x,pl.z,bx,bz),route:[me,[bx,bz]],len:Math.hypot(bx-pl.x,bz-pl.z)};if(!isFinite(BF.T[c]))return{t:Infinity,route:null,len:0};
+ if(BF.rc!==c){BF.rc=c;BF.rt=[];for(let k=c;k>=0;k=BF.nx[k])BF.rt.push(cxz(k));BF.rt.push([bx,bz]);BF.rl=0;for(let i=1;i<BF.rt.length;i++)BF.rl+=Math.hypot(BF.rt[i][0]-BF.rt[i-1][0],BF.rt[i][1]-BF.rt[i-1][1])}
+ const[cx,cz]=BF.rt[0];return{t:BF.T[c]+line(pl.x,pl.z,cx,cz),route:[me,...BF.rt],len:BF.rl+Math.hypot(cx-pl.x,cz-pl.z)}}
+// Base camp state at this location, or null: distance, walk back, O₂ it needs at the current use rate (×3 in a storm), and a go / turn back call with a 50% reserve
+function baseState(){if(!M.base||M.base[0]!=SI.id)return null;const[,bx,bz]=M.base,dd=Math.hypot(bx-pl.x,bz-pl.z),w=walkBack(bx,bz),need=w.t*(WX.inS?3:1);
+ return{dd,w,need,st:dd<25?"AT BASE":!isFinite(need)?"NO ROUTE":M.o2<need?"NO RETURN":M.o2<need*1.5?"TURN BACK":"GO"}}
+function setBase(){M.base=[SI.id,pl.x,pl.z];G.bst="AT BASE";toast("BASE CAMP SET — HUD now tracks the O₂ to walk back over the real terrain · base refills O₂ and battery")}
+// Earth–Mars distance d (AU) and Sun–Earth–Mars angle el (°) at time ms, from JPL's J2000 mean orbital elements (Standish)
+// ponytail: both orbits in the ecliptic plane (Mars is tilted 1.85°), under 1% off in distance
+function earthLink(ms){const T=(ms-946728e6)/315576e7,p=(a,e,L,w)=>{const M=(L-w)*D;let E=M;for(let i=0;i<8;i++)E=M+e*Math.sin(E);const x=a*(Math.cos(E)-e),y=a*Math.sqrt(1-e*e)*Math.sin(E),c=Math.cos(w*D),s=Math.sin(w*D);return[x*c-y*s,x*s+y*c]},
+ e=p(1.00000261,.01671123,100.46457166+35999.37244981*T,102.93768193),m=p(1.52371034,.0933941,-4.55343205+19140.30268499*T,-23.94362959),dx=m[0]-e[0],dy=m[1]-e[1],d=Math.hypot(dx,dy);
+ return{d,el:Math.acos(-(e[0]*dx+e[1]*dy)/(Math.hypot(e[0],e[1])*d))/D}}
+console.assert(Math.abs(earthLink(Date.parse("2025-01-12")).d-.642)<.01,"earthLink: closest approach Jan 2025 is 0.642 AU");console.assert(earthLink(Date.parse("2026-01-09")).el<2,"earthLink: solar conjunction 9 Jan 2026");
+const dly=au=>{const s=au*499.005;return(s/60|0)+"m "+String(s%60|0).padStart(2,"0")+"s"};
+// Dust season at lat/lon from MDAD: for each 30° of Ls, the share of observed Mars years with a real storm within 300 km
+function dustSeason(la,lo){const yr=[...Array(12)].map(()=>new Set()),hit=[...Array(12)].map(()=>new Set());
+ for(const s of STORMS){const b=Math.floor(s[0]%360/30),y=Math.floor(s[0]/360);yr[b].add(y);if(marsKm(la,lo,s[2],s[1])<s[3]+300)hit[b].add(y)}return yr.map((y,b)=>y.size?hit[b].size/y.size:0)}
+// Every location scored as a first human base: landing altitude 30 · sunlight 25 · water 25 · low dust 20; ok = inside NASA's 2015
+// Exploration Zone limits (|lat| ≤ 50°, below +2 km so the thin air can slow a lander). Water = Mars Odyssey GRS soil H₂O (full marks at 8 wt%),
+// or full marks where a lander or orbiter has seen ice (s.ice) beyond the GRS map
+let RANK=null;
+function rank(){if(RANK)return RANK;const R=SITES3D.map(s=>({s,risk:stormRisk(s.lat,s.lon),w:h2oAt(s.lat,s.lon)})),mx=Math.max(...R.map(r=>r.risk))||1;
+ R.forEach(r=>{const s=r.s,a=Math.abs(s.lat);r.ok=a<=50&&s.h<=2000;r.why=a>50?"too cold / dark":"too high to land";r.ice=r.w!=null?r.w.toFixed(1)+" wt%":s.ice?"ICE SEEN":"no data";
+  r.v=Math.round(30*cl((2000-s.h)/6000,0,1)+25*Math.cos(s.lat*D)+(r.w!=null?25*Math.min(1,r.w/8):s.ice?25:0)+20*(1-r.risk/mx))});return RANK=R.sort((a,b)=>b.ok-a.ok||b.v-a.v)}
+function plan(){const[la,lo]=ll(pl.x,pl.z),ds=dustSeason(la,lo),cur=Math.floor(WX.T%360/30),lk=earthLink(Date.now()),b=baseState(),rng=i=>`Ls ${i*30}–${i*30+30}°`,pc=v=>(v*100).toFixed(0)+"%";
+ let a=0,z=0;ds.forEach((v,i)=>{if(v<ds[a])a=i;if(v>ds[z])z=i});
+ openM("MISSION PLAN",`<div class="g">
+ <div class="cd"><h3>EVA · WALK-BACK LIMIT</h3>${b&&!isFinite(b.need)?`Base camp <b>${fm(b.dd)}</b> away, but <b>no walkable route</b>: every way back crosses slopes of 32° or more.`:b?`Base camp <b>${fm(b.dd)}</b> away · fastest route over real MOLA terrain <b>${fm(b.w.len)}</b> (dashed on the minimap), walk <b>${ft(b.w.t)}</b><br>O₂ for the walk <b>${ft(b.need)}</b>${WX.inS?" (×3 in this storm)":""} · with 50% reserve <b>${ft(b.need*1.5)}</b> · O₂ left <b>${ft(M.o2)}</b><br>Call: <b>${b.st}</b>`
+  :`No base camp here. Press <b>B</b> where you stand to set one. The HUD then shows whether your O₂ still covers the walk back, the walk-back limit Apollo crews planned by. Base camp refills O₂ and battery.`}</div>
+ <div class="cd"><h3>RADIATION</h3>Here <b>${rad(G.gy).toFixed(2)} mSv/sol</b> · this mission <b>${M.dose.toFixed(2)} mSv</b> (≈ ${(M.dose/.1).toFixed(0)} chest X-rays)<br>A year on Earth is ~2.4 mSv. Low ground has more air overhead, so less dose: camp in craters and canyons, not on volcanoes.</div>
+ <div class="cd"><h3>EARTH LINK · TODAY</h3>Earth is <b>${lk.d.toFixed(2)} AU</b> (${(lk.d*149.6).toFixed(0)} million km) away<br>One-way delay <b>${dly(lk.d)}</b> · ask + answer <b>${dly(2*lk.d)}</b><br>${lk.el<3?"<b>SOLAR CONJUNCTION</b>: the Sun blocks the radio; NASA stops sending commands for about 2 weeks":lk.el<10?"Sun close to the line of sight: expect a noisy link":"Sun–Earth–Mars angle "+lk.el.toFixed(0)+"°: link clear"}. No real-time help from Houston: crews must decide alone.</div>
+ <div class="cd"><h3>AIR</h3>Pressure <b>${pres(G.gy).toFixed(0)} Pa</b> (Earth: 101,325)<br>${pres(G.gy)>=610?"Above water's triple point: liquid water can last briefly":"Below water's triple point: water boils away"} · gravity <b>0.38 g</b>, jumps go 2.6× higher, but stopping your mass is just as hard.</div>
+ <div class="cd wide"><h3>DUST SEASON HERE · REAL STORMS 1999–2015 (MDAD)</h3>Share of observed Mars years with a storm within 300 km, by season (Ls = Mars's place in its orbit; now ${myLs(WX.T)}, highlighted)
+  <div class="bars">${ds.map((v,i)=>`<i class="${i==cur?"on":""}" style="height:${Math.max(4,v*100)}%" title="${rng(i)}: ${pc(v)}"></i>`).join("")}</div><div class="bl">${ds.map((v,i)=>`<span>${i*30}°</span>`).join("")}</div>
+  Best season for long EVAs and landing: <b>${rng(a)}</b> (${pc(ds[a])}) · worst: <b>${rng(z)}</b> (${pc(ds[z])}). Mars passes closest to the Sun at Ls 251°; the warmer air lifts dust, so Ls 180–360 is storm season. Opportunity was lost to the 2018 global storm.</div>
+ <div class="cd wide"><h3>WHERE TO BUILD THE FIRST HUMAN BASE</h3>Score = landing altitude 30 · sunlight 25 · water 25 · low dust 20. Water is real soil H₂O measured from orbit by Mars Odyssey's gamma-ray spectrometer (top few tens of cm; it cannot see the poles, so there it counts ice that Phoenix and Mars Express saw). NASA's 2015 human landing site workshop required <b>|latitude| ≤ 50°</b> and <b>elevation below +2 km</b> (thin air must be thick enough to slow the lander).
+  <table><tr><th>#</th><th>LOCATION</th><th>SCORE</th><th>ELEV</th><th>LAT</th><th>SOIL H₂O</th><th>STORMS/YR</th><th></th></tr>${rank().map((r,i)=>`<tr><td>${i+1}</td><td>${r.s.name}</td><td><b>${r.ok?r.v:"✗ "+r.why}</b></td><td>${(r.s.h/1e3).toFixed(1)} km</td><td>${r.s.lat.toFixed(0)}°</td><td title="${r.s.ice||"Mars Odyssey GRS, top few tens of cm"}">${r.ice}</td><td>${r.risk.toFixed(1)}</td><td>${r.s.id==SI.id?"HERE":`<button data-t="${r.s.id}">GO</button>`}</td></tr>`).join("")}</table></div></div>`)}
+// ---------- UI
+let S="splash",tt;const V=(id,d)=>$(id).style.display=d||"none",toast=m=>{const e=$("ts");e.textContent=m;e.classList.add("on");clearTimeout(tt);tt=setTimeout(()=>e.classList.remove("on"),3800)};
+const LS={get(){try{return JSON.parse(localStorage.getItem("outland_real1")||"null")}catch(e){return null}},set(o){try{localStorage.setItem("outland_real1",JSON.stringify(o))}catch(e){}},clr(){try{localStorage.removeItem("outland_real1")}catch(e){}}};
+const save=()=>{if(S=="menu"||S=="splash"||S=="loading"||!SI)return;LS.set({site:SI.id,x:pl.x,z:pl.z,yaw:pl.yaw,sim:M.sim,o2:M.o2,bat:M.bat,pts:M.pts,dis:M.dis,sc:M.sc,snd:A.on,base:M.base,dose:M.dose})};
+const lock=()=>{if(!touch&&cv.requestPointerLock)try{const p=cv.requestPointerLock();p&&p.catch&&p.catch(()=>{})}catch(e){}};
+function openM(t,h){if(S=="play")S="modal";if(document.pointerLockElement)document.exitPointerLock();$("mt").textContent=t;$("mc").innerHTML=h;V("md","flex")}
+function closeM(){V("md");if(S=="modal")S="play"}
+function pause(){if(S!="play")return;S="pause";pl.k={};if(document.pointerLockElement)document.exitPointerLock();A.wind(0);save();V("pause","flex")}
+function resume(){V("pause");S="play";lock()}
+function load(x,z,cb){S="loading";V("ld","flex");setTimeout(()=>{pl.x=x;pl.z=z;G.gy=terr(x,z);stream(true);rkBuild();rkDirty=false;wxUpd();V("ld");if(cb)cb();lastK=""},40)}
+const fll=(la,lo)=>Math.abs(la).toFixed(4)+"°"+(la<0?"S":"N")+" "+lo.toFixed(4)+"°E";
+function need(id,cb){if(window.SITE_DATA&&SITE_DATA[id])return cb();const s=document.createElement("script");s.src="3d map/sites/"+id+".js";s.onload=cb;
+ s.onerror=()=>{V("ld","flex");$("ld").textContent="NO TERRAIN DATA — RUN 3d map/fetch_sites.py"};document.head.append(s)}
+// Highest and lowest MOLA cells within 12 km of the arrival point: two real points worth walking to
+function extremes(){let hi=[-1e9],lo=[1e9];for(let i=0;i<GF.ny;i++)for(let j=0;j<GF.nx;j++){const la=GF.lat0-i*GF.dlat,lo2=GF.lon0+j*GF.dlon,[x,z]=xz(la,lo2),h=GF.h[i*GF.nx+j];if(Math.hypot(x,z)>12e3)continue;if(h>hi[0])hi=[h,la,lo2];if(h<lo[0])lo=[h,la,lo2]}
+ return[["Local high point ("+hi[0]+" m)",hi[1],hi[2]],["Local low point ("+lo[0]+" m)",lo[1],lo[2]]]}
+// Make location id the world: decode its MOLA grids, rebuild terrain meshes, beacons and craft (does not move the player)
+function setSite(id,cb){const s=SITES3D.find(q=>q.id==id)||SITES3D[0];V("ld","flex");
+ need(s.id,()=>{SI=s;G.bs=null;GF=grid(SITE_DATA[s.id].f);GC=grid(SITE_DATA[s.id].c);latC=s.lat;lonC=s.lon;cosC=Math.cos(latC*D);mmBg=mmBake(GF);
+  DLT=s.id=="jezero"?xz(18.51,77.38):null; // ponytail: Jezero's western delta fan as a 5 km disc around its approximate centre
+  for(const c of CH.values()){sg.remove(c.m);c.g.dispose()}CH.clear();[fineM,coarseM].forEach(m=>{if(m){sc.remove(m);m.geometry.dispose()}});
+  fineM=gridMesh(GF,MF,-15);coarseM=gridMesh(GC,MCo,-60);
+  const[a,b]=xz(GF.lat0-2*GF.dlat,GF.lon0+2*GF.dlon),[c,d]=xz(GF.lat0-(GF.ny-3)*GF.dlat,GF.lon0+(GF.nx-3)*GF.dlon);MCo.userData.u.uCut.value.set(a,b,c,d);
+  placeCraft();const land=CR.some(c=>c[2])?[["Landing site",s.lat,s.lon]]:[];
+  POI.forEach(p=>sc.remove(p[5]));POI=[...land,...s.pois,...extremes()].map(([n,la,lo])=>{const[x,z]=xz(la,lo),m=new THREE.Mesh(bGeo,bMat);sc.add(m);return[n,la,lo,x,z,m]});cb&&cb()})}
+// Arrive 8 m from the location's rover where NASA last tracked it (or its lander at the landing site), facing it;
+// with land set, or no craft nearby, at the landing site facing its beacon
+function arriveAt(id,cb,land){setSite(id,()=>{const c=land?null:CR.find(c=>c[2])||CR.find(c=>Math.hypot(c[0].position.x,c[0].position.z)<100),cx=c?c[0].position.x:0,cz=c?c[0].position.z:0,x=cx+6,z=cz+6;
+ load(x,z,()=>{Object.assign(pl,{yaw:c?Math.atan2(x-cx,z-cz):POI[0]?Math.atan2(x-POI[0][3],z-POI[0][4]):.5,pitch:-.03,vx:0,vz:0,vy:0,h:0,air:0,k:{}});cb&&cb()})})}
+function play(msg){V("menu");V("pause");V("hud","block");S="play";A.init();toast(msg);lock()}
+function startGame(ld){const s=ld?LS.get():null;if(!ld)LS.clr();V("menu");
+ const go=()=>{Object.assign(M,{t:0,sim:s?s.sim:M.sim,o2:s?s.o2:28800,bat:s?s.bat:68,pts:s?s.pts:0,dis:s?s.dis||{}:{},sc:s?s.sc||{}:{},base:s?s.base||null:null,dose:s?s.dose||0:0});if(s)A.on=s.snd!==false;play("EXPLORE "+SI.name.toUpperCase()+" — real NASA terrain · follow the cyan beacons · WASD move · SHIFT sprint · SPACE jump · F flashlight · M map zoom · B base camp · P mission plan")};
+ if(s)setSite(s.site,()=>load(s.x,s.z,()=>{Object.assign(pl,{yaw:s.yaw,pitch:-.03,vx:0,vz:0,vy:0,h:0,air:0,k:{}});go()}));else arriveAt(SI.id,go)}
+// Exit: back to mission control (hide this frame when embedded, open it otherwise)
+function exitGame(){save();V("md");V("pause");pl.k={};A.wind(0);if(document.pointerLockElement)document.exitPointerLock();if(EMB){S="away";parent.postMessage({loc3d:1,type:"exit"},"*")}else location.href="mars_mission_control.html"}
+function menu(){S="menu";V("hud");V("pause");V("menu","block");if(SI)G.gy=terr(pl.x,pl.z);const has=!!LS.get(),b=$("mb");b.innerHTML="";
+ [["Create New",()=>startGame(false)],["Continue",()=>startGame(true),!has],["Settings",sets],["About Game",about],["Exit",exitGame]].forEach(([t,f,d])=>{const e=document.createElement("button");e.textContent=t;e.disabled=!!d;e.onclick=f;b.append(e)})}
+function sets(){openM("SETTINGS",`<div class="g"><div class="cd"><h3>AUDIO</h3><button id="sSnd">${A.on?"SOUND: ON":"SOUND: OFF"}</button></div><div class="cd"><h3>SAVE DATA</h3><button id="sClr">DELETE SAVE</button></div></div>`);
+ $("sSnd").onclick=e=>{A.on=!A.on;e.target.textContent=A.on?"SOUND: ON":"SOUND: OFF"};$("sClr").onclick=e=>{LS.clr();e.target.textContent="DELETED"}}
+function about(){openM("ABOUT GAME",`<div class="g"><div class="cd"><h3>CONTROLS</h3><b>WASD / arrows</b> move · <b>SHIFT</b> sprint · <b>SPACE</b> jump · <b>mouse</b> look (click to lock) · <b>ESC</b> pause. Touch: joystick + drag to look.</div><div class="cd"><h3>THE WORLD</h3>${SITES3D.length} famous places on Mars with their real shape: NASA MOLA laser altimetry (463 m grid, 3.7 km beyond 90 km) and Mars curvature. Perseverance and Curiosity stand where NASA's latest waypoint puts them; landers sit where they landed. Use LOCATIONS to travel.</div><div class="cd"><h3>STORMS</h3>Dust storms are the real ones seen from orbit (Mars Dust Activity Database, MGS + MRO, 1999–2015), replayed one Mars sol per game sol.</div><div class="cd"><h3>MISSION PLANNING</h3><b>B</b> sets a base camp: the HUD tracks the O₂ needed to walk back along the fastest route over real terrain (Apollo's walk-back limit). <b>P</b> opens the mission plan: radiation dose, today's real radio delay to Earth, this site's dust season from real storms, and every location ranked as a first human base against NASA's landing limits, with water from Mars Odyssey's orbital soil-water map.</div><div class="cd"><h3>CREDITS</h3>OUTLAND · Three.js · NASA PDS MOLA MEGDR · NASA MMGIS traverses · MDAD (Battalio &amp; Wang 2021). Biome colours, rocks and features under ~200 m are stylized.</div></div>`)}
+function locs(){const gc=(a,b)=>marsKm(a.lat,a.lon,b.lat,b.lon);openM("LOCATIONS",`<div class="g"><div class="sh">AT ${SI.name.toUpperCase()}</div>${POI.map((p,i)=>`<div class="cd"><h3>${p[0].toUpperCase()}</h3>${fm(Math.hypot(p[3]-pl.x,p[4]-pl.z))} away${M.dis[SI.id+i]?" · <b>DISCOVERED</b>":""}<br><button data-p="${i}" style="margin-top:6px">TRAVEL</button></div>`).join("")}
+ <div class="sh">FAMOUS LOCATIONS ON MARS</div>${SITES3D.map(s=>`<div class="cd"><h3>${s.name.toUpperCase()}</h3>${s.desc}<br><b>${s.id==SI.id?"YOU ARE HERE":gc(SI,s).toFixed(0)+" km away"}</b><br><button data-t="${s.id}" style="margin-top:6px">TRAVEL</button></div>`).join("")}</div>`)}
+function scan(){const h=terr(pl.x,pl.z),b=B,[la,lo]=ll(pl.x,pl.z),sl=Math.atan(Math.hypot(terr(pl.x+2,pl.z)-terr(pl.x-2,pl.z),terr(pl.x,pl.z+2)-terr(pl.x,pl.z-2))/4)/D,P=pres(h),w=h2oAt(la,lo);
+ if(!M.sc[b]){M.sc[b]=1;M.pts+=20;toast("New biome scanned +20 PTS")}
+ openM("ENVIRONMENT SCAN",`<div class="g"><div class="cd"><h3>${BN[b].toUpperCase()}</h3>Elevation <b>${h.toFixed(0)} m</b> · Slope <b>${sl.toFixed(0)}°</b><br>${BD[b]}</div><div class="cd"><h3>RESOURCES</h3>Soil water <b>${w!=null?w.toFixed(1)+" wt% H₂O":SI.ice||"beyond the orbital map"}</b> <small>${w!=null?"(Mars Odyssey GRS, top few tens of cm; mostly water bound in minerals)":SI.ice?"":"(Odyssey's gamma-ray map stops at 57.5°; its neutron data found ice-rich ground within tens of cm near the poles)"}</small><br>Minerals: <b>${BM[b]}</b></div><div class="cd"><h3>AIR</h3>Pressure <b>${P.toFixed(0)} Pa</b> · ${P>=610?"liquid water can exist briefly":"water boils away instantly"}<br>Radiation <b>≈${rad(h).toFixed(2)} mSv/day</b></div><div class="cd"><h3>ATMOSPHERE · ${myLs(WX.T)}</h3>Temp <b>${$("hT").textContent}</b> · Dust <b>${$("hD").textContent}</b><br>${WX.inS?"Inside real storm "+WX.inS.id:WX.act[0]?"Nearest real storm "+WX.act[0].id+": "+WX.act[0].d.toFixed(0)+" km":"No storms observed this sol"}</div></div>`)}
+$("mc").onclick=e=>{const t=e.target.dataset.t,p=e.target.dataset.p;if(t!==undefined||p!==undefined)V("pause");if(t!==undefined){closeM();arriveAt(t,()=>{S="play";lock();toast("ARRIVED: "+SI.name.toUpperCase())})}
+ else if(p!==undefined){const q=POI[+p];closeM();load(q[3]+20,q[4]+20,()=>{S="play";lock();toast("ARRIVED: "+q[0].toUpperCase())})}};
+$("mx").onclick=closeM;$("md").onclick=e=>{if(e.target.id=="md")closeM()};$("pc").onclick=resume;$("ps").onclick=sets;$("pl").onclick=locs;$("pe").onclick=scan;$("pp").onclick=plan;$("bBase").onclick=setBase;$("pm").onclick=()=>{save();EMB?exitGame():menu()}; // inside mission control its own (identical) main menu takes over
+$("pb").onclick=pause;$("bFl").onclick=flash;$("bScan").onclick=scan;$("bLoc").onclick=locs;
+// Mission control: {loc3d, type:"start", load} = its Create New / Continue; {type:"go", id, sim, land} = TRAVEL there (land: to the landing site, not the rover); "bg" = main-menu backdrop (slow spin, no UI); "hide" = stop rendering
+function bg(){V("hud");V("pause");V("md");V("menu");V("splash");if(document.pointerLockElement)document.exitPointerLock();A.wind(0);S="bg"}
+addEventListener("message",({data:d})=>{if(!d||!d.loc3d)return;if(d.type=="start")startGame(d.load);else if(d.type=="go"){if(d.sim!=null)M.sim=d.sim;arriveAt(d.id,()=>play("ARRIVED: "+SI.name.toUpperCase()+(d.land?" — LANDING SITE":"")),d.land)}
+ else if(d.type=="bg")bg();else if(d.type=="hide"){save();bg();S="away"}});
+// ---------- input
+// E / L / P open ENV SCAN / LOCATIONS / MISSION PLAN, B sets base camp: while the mouse is captured for looking, the cursor cannot reach the buttons
+addEventListener("keydown",e=>{pl.k[e.code]=1;if(S=="play"&&!e.repeat){if(e.code=="KeyE")scan();else if(e.code=="KeyL")locs();else if(e.code=="KeyP")plan();else if(e.code=="KeyB")setBase();else if(e.code=="KeyF")flash();else if(e.code=="KeyM")mmZoom()}if(e.key=="Escape"){if($("md").style.display=="flex")closeM();else if(S=="play")pause();else if(S=="pause")resume()}if(e.code.startsWith("Arrow")||e.code=="Space")e.preventDefault()});addEventListener("keyup",e=>pl.k[e.code]=0);
+cv.addEventListener("click",()=>{if(S=="play")lock()});document.addEventListener("pointerlockchange",()=>{if(!document.pointerLockElement&&S=="play"&&!touch)pause()});
+cv.addEventListener("pointerdown",e=>{if(e.pointerType=="touch")pl.drag={x:e.clientX,y:e.clientY}});addEventListener("pointerup",()=>pl.drag=null);
+addEventListener("pointermove",e=>{if(S!="play")return;if(document.pointerLockElement===cv){pl.yaw-=e.movementX*.0022;pl.pitch-=e.movementY*.0022}else if(pl.drag){pl.yaw-=(e.clientX-pl.drag.x)*.004;pl.pitch-=(e.clientY-pl.drag.y)*.004;pl.drag={x:e.clientX,y:e.clientY}}pl.pitch=cl(pl.pitch,-1.25,1.25)});
+const J=pl.joy,jo=$("joy");let ja=null;const jm=e=>{const r=jo.getBoundingClientRect();let x=(e.clientX-r.left-52)/40,y=(e.clientY-r.top-52)/40;const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}J.x=x;J.y=y;jo.firstChild.style.transform=`translate(${x*30}px,${y*30}px)`},je=()=>{ja=null;J.x=J.y=0;jo.firstChild.style.transform=""};
+jo.addEventListener("pointerdown",e=>{ja=e.pointerId;jo.setPointerCapture(ja);jm(e)});jo.addEventListener("pointermove",e=>{if(e.pointerId===ja)jm(e)});jo.addEventListener("pointerup",je);jo.addEventListener("pointercancel",je);$("jb").addEventListener("pointerdown",()=>{pl.k.Space=1;setTimeout(()=>pl.k.Space=0,120)});
+// ---------- simulation
+let lastK="",pend=0,hacc=0,wacc=0,mY=0,lrk=0;
+const drop=(x,z)=>{const dx=x-pl.x,dz=z-pl.z;return(dx*dx+dz*dz)/(2*RM)};
+function hud(dt){const P=pl,se=EV.se;wacc+=dt;if(wacc>1){wacc=0;wxUpd()}const inS=WX.inS,near=WX.near;
+ if(inS&&!G.inS)toast("DUST STORM "+inS.id+" — real storm seen from orbit · visibility reduced, O₂ use up");G.inS=!!inS;G.near=!!near;
+ M.o2=Math.max(0,M.o2-dt*(inS?3:1)*(G.spr?1.8:1));const sol=3*cl(se,0,1)*(inS?.28:1);M.bat=cl(M.bat+dt*(sol*.0012-.0006-(inS?.0015:0)-(flOn?.0008:0)),5,100);
+ const[la,lo]=ll(P.x,P.z),tmp=-80+75*cl(se,0,1)**.7-(G.b==6?20:0)-(inS?15:0);let tg=null,td=1e9;
+ POI.forEach((p,i)=>{const dd=Math.hypot(p[3]-P.x,p[4]-P.z),k=SI.id+i;p[5].position.set(p[3],terr(p[3],p[4])+450-drop(p[3],p[4]),p[4]);if(dd<150&&!M.dis[k]){M.dis[k]=1;M.pts+=100;toast("DISCOVERED: "+p[0].toUpperCase()+" +100 PTS")}if(!M.dis[k]&&dd<td){td=dd;tg=p}});
+ const ar=tg?"↑↗→↘↓↙←↖"[(Math.round(wrap(Math.atan2(tg[3]-P.x,-(tg[4]-P.z))+P.yaw)/(Math.PI/4))+8)%8]:"";
+ $("obj").textContent=tg?tg[0].toUpperCase()+" · "+fm(td)+" "+ar:"ALL POINTS SURVEYED";$("alt").textContent=G.gy.toFixed(0)+" m";$("pos").textContent=fll(la,lo);$("bio").textContent=BN[G.b].toUpperCase();
+ const lm=lmst(lonC);$("sol").textContent=String(1+Math.floor(M.sim/1800)).padStart(3,"0");$("lm").textContent=String(lm|0).padStart(2,"0")+":"+String((lm%1)*60|0).padStart(2,"0");$("pts").textContent=M.pts;
+ $("hO").textContent=ft(M.o2);$("hB").textContent=M.bat.toFixed(0)+"%";$("hT").textContent=tmp.toFixed(0)+"°C";$("hS").textContent=sol.toFixed(1)+"kW";$("hSt").textContent=G.sta.toFixed(0)+"%";$("hD").textContent=inS?"SEVERE":near?"ELEVATED":"CLEAR";
+ M.dose+=rad(G.gy)*dt/1800;$("dl").textContent=dly(earthLink(Date.now()).d);
+ // base camp: amber beacon, refill within 25 m, HUD walk-back call with a warning when it turns bad
+ const bs=G.bs=baseState();baseB.visible=!!bs;$("hBw").hidden=!bs;
+ if(bs){const[,bx,bz]=M.base;baseB.position.set(bx,terr(bx,bz)+450-drop(bx,bz),bz);if(bs.st=="AT BASE"){M.o2=Math.min(28800,M.o2+dt*600);M.bat=Math.min(100,M.bat+dt*.5)}
+  if(bs.st!=G.bst)toast(bs.st=="AT BASE"?"AT BASE CAMP — refilling O₂ and battery":bs.st=="TURN BACK"?"TURN BACK — O₂ left is under 1.5× the walk to base":bs.st=="NO RETURN"?"O₂ WON'T LAST THE WALK BACK TO BASE":bs.st=="NO ROUTE"?"NO WALKABLE ROUTE BACK TO BASE — cliffs of 32°+ all around":"BASE CAMP "+fm(bs.dd)+" — O₂ covers the walk back ("+ft(bs.need)+")");G.bst=bs.st;
+  $("hBb").textContent=fm(bs.dd)+" · "+bs.st;$("hBb").style.color=bs.st=="GO"||bs.st=="AT BASE"?"":"var(--a)"}
+ A.wind(.03+.03*Math.sin(M.t*.3)+(inS?.12:0))}
+function sim(dt){M.t+=dt;M.sim+=dt;const k=pl.k,spr=(k.ShiftLeft||k.ShiftRight)&&G.sta>3&&!G.tired,sp=spr?11:5.5,fx=-Math.sin(pl.yaw),fz=-Math.cos(pl.yaw),rx=Math.cos(pl.yaw),rz=-Math.sin(pl.yaw);let mx=0,mz=0;
+ if(k.KeyW||k.ArrowUp){mx+=fx;mz+=fz}if(k.KeyS||k.ArrowDown){mx-=fx;mz-=fz}if(k.KeyD||k.ArrowRight){mx+=rx;mz+=rz}if(k.KeyA||k.ArrowLeft){mx-=rx;mz-=rz}
+ if(J.x||J.y){mx+=rx*J.x-fx*J.y;mz+=rz*J.x-fz*J.y}const L=Math.hypot(mx,mz);let tx=0,tz=0;
+ if(L>.01){mx/=L;mz/=L;// walking slows uphill; ~32° and steeper (cliffs, canyon walls) cannot be climbed
+  const gx=(terr(pl.x+1,pl.z)-terr(pl.x-1,pl.z))/2,gz=(terr(pl.x,pl.z+1)-terr(pl.x,pl.z-1))/2,up=gx*mx+gz*mz,sf=up>0?cl(1-Math.atan(up)/D/32,0,1):1;tx=mx*sp*sf;tz=mz*sp*sf}
+ const ac=cl(dt*(pl.air?.8:L?6:4),0,1);pl.vx+=(tx-pl.vx)*ac;pl.vz+=(tz-pl.vz)*ac;G.spr=!!(spr&&L>.01&&!pl.air);G.sta=cl(G.sta+(G.spr?-16:9)*dt,0,100);if(G.sta<=0)G.tired=true;else if(G.sta>30)G.tired=false;
+ if(k.Space&&!pl.air){pl.vy=4.4;pl.air=1}if(pl.air){pl.vy-=3.71*dt;pl.h+=pl.vy*dt;if(pl.h<=0){const v=-pl.vy;pl.h=0;pl.vy=0;pl.air=0;if(v>1.3){puff(8+(v*4|0),1);A.burst(260,.4,.5);G.shake=Math.max(G.shake,.1)}}}
+ const nx=pl.x+pl.vx*dt,nz=pl.z+pl.vz*dt;if(!blocked(nx,pl.z))pl.x=nx;if(!blocked(pl.x,nz))pl.z=nz;
+ const gh2=terr(pl.x,pl.z);G.b=B;G.gy+=(gh2-G.gy)*cl(dt*20,0,1);
+ if(!pl.air){const vs=Math.hypot(pl.vx,pl.vz);if(vs>.8){G.fd+=vs*dt;if(G.fd>(G.spr?2.2:1.5)){G.fd=0;A.burst(G.spr?700:450,G.spr?.12:.07,.12);if(G.spr)puff(2,.5)}}}
+ const vs2=Math.hypot(pl.vx,pl.vz);G.bobT+=dt*(vs2>.5?vs2*1.3:1.1);const mv=!pl.air&&vs2>.5,bob=pl.air?0:mv?Math.sin(G.bobT*2)*(G.spr?.1:.045):Math.sin(G.bobT)*.012;G.shake=Math.max(0,G.shake-dt*.6);const sh=G.shake*(R()-.5);
+ cam.position.set(pl.x+sh,G.gy+1.8+pl.h+bob+sh,pl.z);cam.rotation.set(pl.pitch+sh*.3,pl.yaw,mv?Math.cos(G.bobT)*.005:0,"YXZ");FL.position.copy(cam.position);FL.target.position.copy(cam.position).add(TV.set(-Math.sin(pl.yaw)*Math.cos(pl.pitch),Math.sin(pl.pitch),-Math.cos(pl.yaw)*Math.cos(pl.pitch)));
+ const k0=Math.floor(pl.x/TS[0])+","+Math.floor(pl.z/TS[0]);if(k0!=lastK||pend>0){lastK=k0;pend=stream(false)}
+ pUpd(dt);env(G.inS,G.near);mmDraw();hacc+=dt;if(hacc>=.25){hud(hacc);hacc=0}}
+let last=performance.now();
+function frame(now){requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000);last=now;if(S=="away"||!SI)return;
+ if(S=="play")sim(dt);else if(S=="menu"||S=="splash"||S=="bg"){M.sim+=dt*2;mY+=dt*.04;cam.position.set(pl.x,G.gy+6,pl.z);cam.rotation.set(.03,mY,0,"YXZ");env(0,0)}
+ if(rkDirty&&now-lrk>250){lrk=now;rkDirty=false;rkBuild()}rd.render(sc,cam)}
+// ---------- boot: splash → build the world behind it → main menu; TRAVEL (?s=<id>&go=1[&land=1][&sim=]) skips straight into play,
+// its main menu (?bg=1) gets just the spinning world as backdrop
+const Q=new URLSearchParams(location.search),GO=Q.has("go");if(Q.get("sim"))M.sim=+Q.get("sim");
+function endSplash(){if(S!="splash")return;$("splash").style.opacity=0;setTimeout(()=>V("splash"),800);menu()}
+if(Q.has("bg")){bg();setSite(Q.get("s")||"jezero",()=>{pl.x=pl.z=18;G.gy=terr(18,18);stream(true);rkBuild();rkDirty=false;wxUpd();V("ld")})}
+else if(GO){V("splash");S="loading";arriveAt(Q.get("s")||"jezero",()=>play("ARRIVED: "+SI.name.toUpperCase()+(Q.has("land")?" — LANDING SITE":"")+" — real NASA terrain · click to look · WASD move"),Q.has("land"))}
+else{setSite(Q.get("s")||LS.get()?.site||"jezero",()=>{pl.x=pl.z=18;G.gy=terr(18,18);stream(true);rkBuild();rkDirty=false;wxUpd();V("ld")});setTimeout(endSplash,3000);addEventListener("pointerdown",()=>{if(S=="splash")endSplash()});addEventListener("keydown",()=>{if(S=="splash")endSplash()})}
+requestAnimationFrame(frame);
+})();
+</script></body></html>

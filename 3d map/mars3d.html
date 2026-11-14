@@ -15,28 +15,26 @@
 #bar button{padding:6px 10px;font:14px sans-serif}
 #hud{display:none;position:absolute;top:10px;right:10px;z-index:2;max-width:340px;padding:10px;background:#111d;color:#eee;
   font:14px/1.5 monospace;border:1px solid #555;border-radius:6px;white-space:pre-line}
-/* inside mission control: clear its header, hide map chrome while mission control drives the camera */
-.mc #bar,.mc .cesium-viewer-toolbar{top:62px}.mc #info{top:104px}.mc #hud{top:62px;right:290px}
-.surf #bar,.surf #info,.surf #hud,.surf .cesium-viewer-toolbar{display:none}</style>
+/* inside mission control: clear its header */
+.mc #bar,.mc .cesium-viewer-toolbar{top:62px}.mc #info{top:104px}.mc #hud{top:62px;right:290px}</style>
 </head>
 <body>
 <div id="map"></div>
 <div id="bar">
   <button id="toggle">Flat map</button>
-  <button id="eye">Back to orbit</button>
   <button id="marsinfo">About Mars</button>
   <button id="routeBtn">Plan route</button>
-  <button id="strandBtn">Stranded!</button>
   <button id="baseBtn">Mission base</button>
 </div>
 <div id="info" style="display:none"><h3></h3><p></p>
-  <button id="view">View closely</button><button id="land">Land here</button><button id="close">Close</button>
+  <button id="view">View closely</button><button id="travel">Travel there</button><button id="close">Close</button>
   <a target="_blank">NASA mission page</a></div>
 <div id="hud"></div>
 <script src="config.js"></script>
 <script src="traverses.js"></script>
 <script src="moons.js"></script>
 <script src="storms.js"></script>
+<script src="sites.js"></script>
 <script>
 // Mars IAU radii (m)
 const mars = new Cesium.Ellipsoid(3396190, 3396190, 3376200);
@@ -51,6 +49,7 @@ const trek = layer => new Cesium.UrlTemplateImageryProvider({
 
 const viewer = new Cesium.Viewer('map', {
   globe: new Cesium.Globe(mars),
+  mapProjection: new Cesium.GeographicProjection(mars), // 2D / Columbus view flatten Mars, not Earth
   baseLayer: new Cesium.ImageryLayer(trek('Mars_Viking_MDIM21_ClrMosaic_global_232m')),
   baseLayerPicker: false, geocoder: false, timeline: false, animation: false,
   skyAtmosphere: false, infoBox: false, selectionIndicator: false, navigationInstructionsInitiallyVisible: false, // infoBox iframe crashes on file://
@@ -75,11 +74,14 @@ if (window.CESIUM_ION_TOKEN) Cesium.Cesium3DTileset.fromIonAssetId(3644333).then
       material.diffuse *= mix(0.06, 1.0, smoothstep(-0.05, 0.25, d));
     }`,
   });
+  t.maximumScreenSpaceError = 24; // default 16: fewer, coarser tiles for a smoother frame rate
   terrain = viewer.scene.primitives.add(t);
-  viewer.scene.globe.show = false;
+  terrain.show = viewer.scene.mode === Cesium.SceneMode.SCENE3D; // 2D / Columbus view keep the flat map
+  viewer.scene.globe.show = !terrain.show;
 }).catch(err => { terrainFailed = true; console.error('Mars terrain failed, staying on flat map', err); });
 
-const NASA3D = n => `https://raw.githubusercontent.com/nasa/NASA-3D-Resources/master/3D%20Models/${encodeURIComponent(n)}/${encodeURIComponent(n)}.glb`;
+// NASA 3D Resources models, saved locally in models/ (GitHub only lets browsers cache them for 5 minutes)
+const NASA3D = n => `models/${encodeURIComponent(n)}.glb`;
 const pins = [];
 
 // Rovers: landing site = first traverse point, path = full NASA traverse (traverses.js)
@@ -96,13 +98,17 @@ const htmlLabel = (entity, text, color, font) => {
   labels.push([entity, div]);
 };
 const rovers = [
-  ['Curiosity – Gale Crater', 'MSL', 'ORANGE', 'https://science.nasa.gov/mission/msl-curiosity/'],
-  ['Perseverance – Jezero Crater', 'M20', 'CYAN', 'https://science.nasa.gov/mission/mars-2020-perseverance/'],
+  ['Curiosity – Gale Crater', 'MSL', 'ORANGE', 'https://science.nasa.gov/mission/msl-curiosity/', 'gale'],
+  ['Perseverance – Jezero Crater', 'M20', 'CYAN', 'https://science.nasa.gov/mission/mars-2020-perseverance/', 'jezero'],
 ];
-for (const [name, key, col, link] of rovers) {
+for (const [name, key, col, link, site] of rovers) {
   const p = TRAVERSES[key].pts, color = Cesium.Color[col];
+  // ground-clamped lines are costly per vertex: keep path points at least ~5 m apart (64k -> a few thousand)
+  const thin = [];
+  for (let i = 0; i < p.length; i += 2)
+    if (!thin.length || Math.hypot(p[i] - thin.at(-2), p[i + 1] - thin.at(-1)) > 8e-5) thin.push(p[i], p[i + 1]);
   viewer.entities.add({
-    polyline: { positions: Cesium.Cartesian3.fromDegreesArray(p, mars), width: 3, material: color,
+    polyline: { positions: Cesium.Cartesian3.fromDegreesArray(thin, mars), width: 3, material: color,
                 clampToGround: true },
   });
   const pin = (label, i, size, model) => pins.push(viewer.entities.add({
@@ -112,28 +118,33 @@ for (const [name, key, col, link] of rovers) {
                                  disableDepthTestDistance: Infinity },
     // ponytail: no NASA Curiosity glTF exists, so both rovers use the Perseverance model (same chassis)
     model: model && { uri: NASA3D('Mars 2020 Perseverance Rover'), minimumPixelSize: 24 },
-    properties: { link },
+    properties: { link, site, land: i === 0 },
   })) && htmlLabel(pins.at(-1), label, color, '13px sans-serif');
   pin(`${name} landing site`, 0, 12);
   pin(`${name.split(' ')[0]} now`, p.length - 2, 8, true);
 }
 // Ground markers besides the rover pins (mission base, landing sites); each needs a .carto
 const onGround = [];
-// Every 20 frames, set every ground marker on the surface as currently rendered (tracks LOD changes);
-// on the flat map the surface is the ellipsoid, so height 0 (terrain heights there would bury them)
+// Every 3rd frame, set one ground marker (round-robin) on the surface as currently rendered, if it is within 300 km
+// of the camera: sampleHeight re-renders the scene, so this caps it at ~20 calls/s however many markers there are.
+// On the flat map the surface is the ellipsoid, so all markers go to height 0 once (terrain heights there would bury them)
 let frame = 0, wasFlat = false;
 viewer.scene.postRender.addEventListener(scene => {
   const all = pins.concat(onGround), flat = !terrain?.show;
-  if (flat && wasFlat) return;
-  wasFlat = flat;
-  if (!flat && frame++ % 20) return;
-  for (const e of all) {
-    const h = flat ? 0 : scene.sampleHeight(e.carto, others());
-    if (h !== undefined) e.position = Cesium.Cartesian3.fromRadians(e.carto.longitude, e.carto.latitude, h, mars);
+  if (flat) {
+    if (!wasFlat) for (const e of all) e.position = Cesium.Cartesian3.fromRadians(e.carto.longitude, e.carto.latitude, 0, mars);
+    wasFlat = true;
+    return;
   }
+  wasFlat = false;
+  if (frame++ % 3 || !all.length) return;
+  const e = all[(frame / 3 | 0) % all.length];
+  if (Cesium.Cartesian3.distance(Cesium.Cartesian3.fromRadians(e.carto.longitude, e.carto.latitude, 0, mars), scene.camera.positionWC) > 3e5) return;
+  const h = scene.sampleHeight(e.carto, others());
+  if (h !== undefined) e.position = Cesium.Cartesian3.fromRadians(e.carto.longitude, e.carto.latitude, h, mars);
 });
 
-// Info panel: click any body/craft/rover (or its label) for facts + a close-up view
+// Info panel: click any body/craft/rover (or its label) for facts; a close-up view for Mars and anything with a 3D model
 const INFO = {
   Mars: 'Fourth planet from the Sun. Radius 3,390 km, day 24 h 37 min, year 687 Earth days. Home to Olympus Mons (~22 km high) and Valles Marineris (~4,000 km long).',
   Phobos: 'Larger of Mars\'s two moons, ~22 km across. Orbits every 7 h 39 min, faster than Mars turns, and is slowly spiralling inward.',
@@ -152,16 +163,28 @@ function showInfo(entity) {
   shown = entity;
   const name = entity?.name ?? 'Mars';
   info.querySelector('h3').textContent = name;
-  info.querySelector('p').textContent = entity?.properties?.desc?.getValue() ?? INFO[Object.keys(INFO).find(k => name.startsWith(k))] ?? '';
-  document.getElementById('view').style.display = '';
-  document.getElementById('land').style.display = 'none';
+  info.querySelector('p').textContent = entity?.properties?.desc?.getValue() ?? INFO[Object.keys(INFO).filter(k => name.startsWith(k)).sort((a, b) => b.length - a.length)[0]] ?? '';
+  document.getElementById('view').style.display = !entity || entity.model ? '' : 'none'; // Mars or a 3D model only
+  const site = entity?.properties?.site?.getValue(), travel = document.getElementById('travel');
+  travel.style.display = site ? '' : 'none';
+  travel.onclick = () => travelTo(site, entity?.properties?.land?.getValue());
   const link = entity?.properties?.link?.getValue();
   info.querySelector('a').style.display = link ? '' : 'none';
   if (link) info.querySelector('a').href = link;
   info.style.display = '';
 }
-document.getElementById('close').onclick = () => { info.style.display = 'none'; viewer.trackedEntity = undefined; };
+// Close: hide the panel and stop following; after "View closely", fly back to the view from before it (closeUp = that camera view)
+let closeUp = null;
+document.getElementById('close').onclick = () => {
+  info.style.display = 'none'; viewer.trackedEntity = undefined;
+  if (!closeUp) return;
+  viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+  viewer.camera.flyTo({ ...closeUp, duration: 2 });
+  closeUp = null;
+};
 document.getElementById('view').onclick = () => {
+  const c = viewer.camera;
+  closeUp ??= { destination: c.positionWC.clone(), orientation: { heading: c.heading, pitch: c.pitch, roll: c.roll } };
   if (!shown) return viewer.camera.flyHome();
   if (pins.includes(shown)) // rover: fly to a 40 m view; tracking a ground point would fight the terrain clamp
     viewer.flyTo(shown, { offset: new Cesium.HeadingPitchRange(0, -0.35, 40) });
@@ -169,51 +192,16 @@ document.getElementById('view').onclick = () => {
 };
 document.getElementById('marsinfo').onclick = () => showInfo(null);
 
-// Ground mode: click the surface -> stand there at eye height, drag to look around
-const eye = document.getElementById('eye');
-let ground = false, orbitView;
-const ssc = viewer.scene.screenSpaceCameraController;
-function setGround(on) {
-  ground = on;
-  ssc.enableRotate = ssc.enableZoom = ssc.enableTilt = ssc.enableTranslate = !on;
-  ssc.lookEventTypes = on ? Cesium.CameraEventType.LEFT_DRAG
-                          : { eventType: Cesium.CameraEventType.LEFT_DRAG, modifier: Cesium.KeyboardEventModifier.SHIFT };
-  eye.style.display = on ? '' : 'none';
-}
-setGround(false);
-eye.onclick = () => { setGround(false); game = null; hud(); viewer.camera.flyTo(orbitView); };
-
-// WASD walk (Shift = run); each frame keep the eye 1.7 m above the ground currently rendered
-const keys = new Set();
-addEventListener('keydown', e => keys.add(e.code));
-addEventListener('keyup', e => keys.delete(e.code));
-let last = performance.now();
+// Slow globe spin (one turn per ~13 min) while spin is on
+let spin = false, last = performance.now();
 viewer.scene.preRender.addEventListener(scene => {
   const now = performance.now(), dt = (now - last) / 1000;
   last = now;
-  if (spin) scene.camera.rotate(Cesium.Cartesian3.UNIT_Z, -0.008 * dt); // menu backdrop: one turn per ~13 min
-  if (surf) return puppet(scene);
-  if (!ground) return;
-  const running = keys.has('ShiftLeft') || keys.has('ShiftRight');
-  const cam = scene.camera, step = (running ? 100 : 10) * dt; // m/s: walk, Shift = run
-  if (game) tickGame(cam, dt, running);
-  if (keys.has('KeyW')) cam.moveForward(step);
-  if (keys.has('KeyS')) cam.moveBackward(step);
-  if (keys.has('KeyA')) cam.moveLeft(step);
-  if (keys.has('KeyD')) cam.moveRight(step);
-  const c = Cesium.Cartographic.fromCartesian(cam.positionWC, mars);
-  // ponytail: flat-map mode has no relief, so ground height is 0 there
-  const h = terrain?.show ? scene.sampleHeight(c) : 0;
-  if (h === undefined) return; // tiles not drawn here yet; retry next frame
-  cam.setView({
-    destination: Cesium.Cartesian3.fromRadians(c.longitude, c.latitude, h + 1.7, mars),
-    orientation: { heading: cam.heading, pitch: cam.pitch, roll: 0 },
-  });
+  if (spin) scene.camera.rotate(Cesium.Cartesian3.UNIT_Z, -0.008 * dt);
 });
 
-// Click: named object -> info panel; anywhere else on Mars -> ask, then land there
+// Click: named object -> info panel; anywhere else on Mars -> survival survey of that spot (or a route point)
 viewer.screenSpaceEventHandler.setInputAction(e => {
-  if (ground || surf) return;
   const p = viewer.scene.pick(e.position);
   if (p?.id?.name) return showInfo(p.id);
   viewer.trackedEntity = undefined;
@@ -225,21 +213,14 @@ viewer.screenSpaceEventHandler.setInputAction(e => {
   showSurvival(c);
 }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
-// Fly down to the surface point c, then switch to ground mode; inside mission control its astronaut lands there instead
-function landAt(c) {
-  info.style.display = 'none';
-  if (MC) return toMC({ type: 'eva', lat: deg(c.latitude), lon: deg(c.longitude) });
-  orbitView = { destination: viewer.camera.positionWC.clone(),
-                orientation: { heading: viewer.camera.heading, pitch: viewer.camera.pitch, roll: 0 } };
-  viewer.camera.flyTo({
-    // land a bit high: the clicked height is from coarse orbit tiles; ground mode then settles to 1.7 m
-    destination: Cesium.Cartesian3.fromRadians(c.longitude, c.latitude, c.height + 50, mars),
-    orientation: { heading: 0, pitch: 0, roll: 0 },
-    duration: 4, complete: () => setGround(true),
-  });
+// Walk famous location id in the real-terrain game (locations3d.html), through mission control when inside it, else directly;
+// land: arrive at the landing site instead of next to the rover
+function travelTo(id, land) {
+  if (MC) toMC({ type: 'travel', id, land: !!land });
+  else location.href = '../locations3d.html?s=' + id + '&go=1' + (land ? '&land=1' : '');
 }
 
-// ===== Survival guide: habitability score, route planner, stranded game =====
+// ===== Survival guide: habitability score, route planner =====
 const deg = Cesium.Math.toDegrees, RM = 3389500; // mean Mars radius (m)
 const hudDiv = document.getElementById('hud');
 const hud = text => { hudDiv.style.display = text ? '' : 'none'; hudDiv.textContent = text ?? ''; };
@@ -284,9 +265,7 @@ function showSurvival(c) {
     `<span style="color:${['#f55', '#fc3', '#5d5'][s]}">●</span> <b>${k}</b>: ${v}<br><small style="color:#aaa">${why}</small>`).join('<br>');
   info.querySelector('a').style.display = 'none';
   document.getElementById('view').style.display = 'none';
-  const land = document.getElementById('land');
-  land.style.display = '';
-  land.onclick = () => landAt(c);
+  document.getElementById('travel').style.display = 'none';
   info.style.display = '';
 }
 
@@ -367,32 +346,6 @@ function planRoute(a, b) {
          path: path.map(k => [deg(latOf((k / N) | 0)), deg(lonOf(k % N))]) });
 }
 
-// Stranded: dropped 0.8–2 km from a random rover/landing site with just enough O2 to walk there
-let game = null;
-document.getElementById('strandBtn').onclick = () => {
-  const t = pins[Math.floor(Math.random() * pins.length)], ang = Math.random() * 2 * Math.PI;
-  const dist = 800 + Math.random() * 1200, lat = t.carto.latitude;
-  const c = new Cesium.Cartographic(t.carto.longitude + dist * Math.sin(ang) / (RM * Math.cos(lat)),
-                                    lat + dist * Math.cos(ang) / RM, heightAt(t.carto.longitude, lat) ?? 0);
-  if (MC) return toMC({ type: 'drill', lat: deg(c.latitude), lon: deg(c.longitude),
-                        target: { name: t.name, lat: deg(t.carto.latitude), lon: deg(t.carto.longitude) } });
-  game = { target: t, o2: dist / 10 * 1.6 }; // seconds of O2: walking time at 10 m/s + 60% margin
-  hud('STRANDED!\nYour suit is leaking. Reach the beacon before O2 runs out.\nWASD to walk, drag to look. Shift runs but burns O2 3×.');
-  landAt(c);
-};
-function tickGame(cam, dt, running) {
-  const c = Cesium.Cartographic.fromCartesian(cam.positionWC, mars), t = game.target.carto;
-  const dN = (t.latitude - c.latitude) * RM, dE = (t.longitude - c.longitude) * RM * Math.cos(c.latitude);
-  const dist = Math.hypot(dN, dE);
-  game.o2 -= dt * (running ? 3 : 1);
-  if (dist < 60) { hud(`RESCUED at ${game.target.name}!\nO2 left: ${game.o2.toFixed(0)} s`); game = null; return; }
-  if (game.o2 <= 0) { hud(`OUT OF OXYGEN\n${dist.toFixed(0)} m short of ${game.target.name}.\nPress "Back to orbit" and try again.`); game = null; return; }
-  const rel = Math.atan2(dE, dN) - cam.heading;
-  const arrow = '↑↗→↘↓↙←↖'[((Math.round(rel / (Math.PI / 4)) % 8) + 8) % 8];
-  hud(`STRANDED  O2 ${game.o2.toFixed(0)} s ${'█'.repeat(Math.max(0, Math.ceil(game.o2 / 20)))}\n` +
-      `Beacon: ${game.target.name}\n${arrow}  ${dist.toFixed(0)} m`);
-}
-
 // Sun lighting: day side bright, night side dark
 viewer.scene.globe.enableLighting = true;
 viewer.scene.light = new Cesium.SunLight({ intensity: 2.5 });
@@ -439,12 +392,12 @@ for (const [name, alt, period, inc, node, col, shape] of bodies) {
   }));
 }
 
-// Each frame: place every HTML label above its craft, hidden when Mars is in the way or the entity is hidden
+// Each frame: place every HTML label above its craft, hidden when the entity is hidden or (on the globe) Mars is in the way
 viewer.scene.postRender.addEventListener((scene, time) => {
   const occluder = new Cesium.EllipsoidalOccluder(mars, scene.camera.positionWC);
   for (const [entity, div] of labels) {
     const p = entity.position.getValue(time);
-    const s = entity.show && occluder.isPointVisible(p) && Cesium.SceneTransforms.wgs84ToWindowCoordinates(scene, p);
+    const s = entity.show && (!is3D() || occluder.isPointVisible(p)) &&Cesium.SceneTransforms.wgs84ToWindowCoordinates(scene, p);
     div.style.display = s ? '' : 'none';
     if (s) div.style.transform = `translate(${s.x}px, ${s.y - 10}px) translate(-50%, -100%)`;
   }
@@ -457,22 +410,31 @@ document.getElementById('toggle').onclick = e => {
   viewer.scene.globe.show = !terrain.show;
   e.target.textContent = terrain.show ? 'Flat map' : '3D terrain';
 };
+// 2D and Columbus view: the Mars 3D Tiles and the orbits only make sense on the globe, so those modes show the
+// imagery map with ground markers; back in 3D the terrain returns as the toggle last left it
+const is3D = () => viewer.scene.mode === Cesium.SceneMode.SCENE3D;
+viewer.scene.morphComplete.addEventListener(() => {
+  const toggle = document.getElementById('toggle');
+  toggle.style.display = is3D() ? '' : 'none';
+  if (terrain) { terrain.show = is3D() && toggle.textContent === 'Flat map'; viewer.scene.globe.show = !terrain.show; }
+  orbital.forEach(o => o.show = is3D());
+  sunDot.show = is3D() && viewer.scene.light === sunLight;
+  if (!is3D()) viewer.trackedEntity = undefined;
+});
 
 // ===== Mission control bridge: inside mars_mission_control.html this page is its world view =====
-// Sends: ready, here, survey, route, eva, drill, close, key.
-// Receives: mode, cam, env, clock, fly, track, sites, base, storms, mark.
+// Sends: ready, survey, route, travel, close.
+// Receives: sleep, mode, env, clock, fly, track, storms.
 function toMC(msg) { if (MC) parent.postMessage({ mars3d: 1, ...msg }, '*'); }
 const BASE = { lon: TRAVERSES.M20.pts[0], lat: TRAVERSES.M20.pts[1] }; // Perseverance landing point
 let stormEnts = [];
 // Entities that terrain height sampling must look through
 const others = () => pins.concat(onGround, stormEnts);
-// Move a ground marker to carto c now (heading e.hdg if set); the postRender loop then keeps it on the rendered surface
+// Move a ground marker to carto c now; the postRender loop then keeps it on the rendered surface
 function placeOnGround(e, c) {
   e.carto = c;
   const h = terrain?.show ? viewer.scene.sampleHeight(c, others()) : 0;
-  const p = Cesium.Cartesian3.fromRadians(c.longitude, c.latitude, h ?? 0, mars);
-  e.position = p;
-  if (e.hdg !== undefined) e.orientation = Cesium.Transforms.headingPitchRollQuaternion(p, new Cesium.HeadingPitchRoll(e.hdg, 0, 0), mars);
+  e.position = Cesium.Cartesian3.fromRadians(c.longitude, c.latitude, h ?? 0, mars);
 }
 // Labelled surface marker with a description for the info panel; a point (drawn over terrain within 50 km of
 // the camera) unless extra graphics such as a model are given
@@ -484,91 +446,39 @@ function groundDot(name, color, size, desc, c, extra = {}) {
   htmlLabel(e, name, color, '12px sans-serif');
   return e;
 }
-const baseC = Cesium.Cartographic.fromDegrees(BASE.lon, BASE.lat);
-const baseDots = {
-  pl: groundDot('YOU', Cesium.Color.WHITE, 9, "Your astronaut from mission control's first-person view.", baseC),
-  rover: groundDot('Mission rover', Cesium.Color.LIME, 9, "Mission control's rover, replaying Perseverance's real NASA drive path from the landing site.", baseC,
-    { model: { uri: NASA3D('Mars 2020 Perseverance Rover'), minimumPixelSize: 24 } }),
-  survey: groundDot('Survey beacon', Cesium.Color.AQUA, 9, "Mission 01 target on Perseverance's real drive path: reach it, scan, analyze the deposit and return the data to the rover.", baseC,
-    { cylinder: { length: 40, topRadius: 0.25, bottomRadius: 0.25, material: Cesium.Color.AQUA.withAlpha(0.6) } }),
-};
+// Famous locations (sites.js): click one for its story and a Travel button into its real-terrain 3D model;
+// Curiosity and Perseverance already have their rover pins
+for (const s of SITES3D) if (!/Curiosity|Perseverance/.test(s.name))
+  groundDot(s.name, Cesium.Color.YELLOW, 8, s.desc, Cesium.Cartographic.fromDegrees(s.lon, s.lat, 0), { properties: { desc: s.desc, site: s.id } });
 const flyTo = (lat, lon, alt) => viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(lon, lat, alt, mars), duration: 3 });
 
-// Surface mode: mission control owns the astronaut (cam = {lat, lon, hd, pitch, roll, up}); this page draws the view
-let surf = false, spin = false, flying = false, cam = null, groundH = 0, groundOk = false, tick = 0, rep = 0, sky = null;
 const sunLight = new Cesium.DirectionalLight({ direction: Cesium.Cartesian3.UNIT_X, intensity: 2.5 });
-// Background: mission control's sky colour on the surface in daylight, stars otherwise
-function applySky() {
-  const s = viewer.scene, day = surf && sky;
-  s.backgroundColor = day ? Cesium.Color.fromCssColorString(sky.sky) : Cesium.Color.BLACK;
-  if (s.skyBox) s.skyBox.show = !(day && sky.day > 0.35);
-}
-// Each frame: eye at cam.up metres over the rendered terrain (after a first valid height sample there, glide down to it);
-// ~4×/s report terrain, gradient and the sky (elevation of every moon/orbiter), every ~2 s also the survival rows
-function puppet(scene) {
-  if (!cam || flying) return;
-  const c = Cesium.Cartographic.fromDegrees(cam.lon, cam.lat), h = heightAt(c.longitude, c.latitude);
-  if (h !== undefined && !groundOk) {
-    groundOk = true; groundH = h; flying = true;
-    return viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromRadians(c.longitude, c.latitude, h + cam.up, mars),
-      orientation: { heading: cam.hd, pitch: 0, roll: 0 }, duration: 2, complete: () => flying = false, cancel: () => flying = false });
-  }
-  if (!groundOk) return;
-  if (h !== undefined) groundH = h;
-  scene.camera.setView({ destination: Cesium.Cartesian3.fromRadians(c.longitude, c.latitude, groundH + cam.up, mars),
-                         orientation: { heading: cam.hd, pitch: cam.pitch, roll: cam.roll } });
-  if (tick++ % 15) return;
-  c.height = groundH;
-  const d = 3 / RM, k = d / Math.cos(c.latitude);
-  const [hE, hW, hN, hS] = [[k, 0], [-k, 0], [0, d], [0, -d]].map(([x, y]) => heightAt(c.longitude + x, c.latitude + y));
-  const here = { type: 'here', lat: cam.lat, lon: cam.lon, h: groundH, P: pressure(groundH), dose: doseAt(pressure(groundH)), sky: {},
-                 gE: hE === undefined || hW === undefined ? 0 : (hE - hW) / 6,
-                 gN: hN === undefined || hS === undefined ? 0 : (hN - hS) / 6 };
-  const pos = Cesium.Cartesian3.fromRadians(c.longitude, c.latitude, groundH + 2, mars);
-  const up = mars.geodeticSurfaceNormal(pos, new Cesium.Cartesian3()), t = viewer.clock.currentTime, v = new Cesium.Cartesian3();
-  for (const o of orbital) if (o.name) {
-    Cesium.Cartesian3.normalize(Cesium.Cartesian3.subtract(o.position.getValue(t), pos, v), v);
-    here.sky[o.name] = deg(Math.asin(Cesium.Cartesian3.dot(v, up)));
-  }
-  if (!(rep = (rep + 1) % 8)) {
-    const rows = survival(c), score = rows.reduce((s, r) => s + r[2], 0);
-    Object.assign(here, { rows, score, max: rows.length * 2, verdict: verdictOf(score) });
-  }
-  toMC(here);
-}
-// Switch between surface (descend to the astronaut, mission control steers) and orbit (free map; spin = menu backdrop)
+// Sun disc drawn where mission control's light comes from (Cesium's own Sun sits at the real-date position, elsewhere)
+const sunDot = viewer.entities.add({ show: false, billboard: { width: 110, height: 110, image: (() => {
+  const c = document.createElement('canvas'), g = c.getContext('2d'), r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  c.width = c.height = 128;
+  [[0, '#fff'], [.12, '#fff8e8'], [.3, 'rgba(255,220,170,.35)'], [1, 'rgba(255,200,140,0)']].forEach(s => r.addColorStop(...s));
+  g.fillStyle = r; g.fillRect(0, 0, 128, 128); return c;
+})() } });
+// Whole-planet view of lat/lon (m.spin: slow spin)
 function setMode(m) {
-  surf = m.surface; spin = !!m.spin;
-  document.body.classList.toggle('surf', surf);
-  ssc.enableInputs = !surf;
-  baseDots.pl.show = !surf;
+  spin = !!m.spin; closeUp = null;
   info.style.display = 'none'; viewer.trackedEntity = undefined;
-  if (ground) { setGround(false); game = null; hud(); }
-  applySky();
-  // ground height there if it is on screen now; otherwise descend to 25 km (above Olympus Mons) looking straight down
-  // so the terrain below renders and puppet() can sample it
-  const g = surf ? heightAt(Cesium.Math.toRadians(m.lon), Cesium.Math.toRadians(m.lat)) : undefined;
-  groundOk = false;
-  flying = true;
-  viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(m.lon, m.lat, spin ? 9e6 : !surf ? 25e3 : g === undefined ? 25e3 : g + 40, mars),
-    orientation: surf ? { heading: m.hd, pitch: g === undefined ? -Math.PI / 2 : -0.15, roll: 0 } : undefined,
-    duration: spin ? 0 : 3, complete: () => flying = false, cancel: () => flying = false,
-  });
+  viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(m.lon, m.lat, 9e6, mars), duration: spin ? 0 : 2 });
 }
-addEventListener('keydown', e => {
-  if (surf) return toMC({ type: 'key', code: e.code, key: e.key, down: true, repeat: e.repeat });
-  if (e.key === 'Escape' || (e.code === 'KeyM' && !ground)) toMC({ type: 'close' });
-});
-addEventListener('keyup', e => { if (surf) toMC({ type: 'key', code: e.code, down: false }); });
+// Escape hands control back to mission control (its pause menu)
+addEventListener('keydown', e => { if (e.key === 'Escape') toMC({ type: 'close' }); });
 addEventListener('message', ({ data: m }) => {
   if (!m || !m.mc) return;
-  if (m.type === 'mode') setMode(m);
-  else if (m.type === 'cam') cam = m;
-  else if (m.type === 'env') { // m.sun: unit vector to the Sun in the Mars-fixed frame
-    sunLight.direction = Cesium.Cartesian3.negate(Cesium.Cartesian3.fromArray(m.sun), new Cesium.Cartesian3());
+  if (m.type === 'sleep') viewer.useDefaultRenderLoop = !m.on; // hidden behind the outland view: stop rendering
+  else if (m.type === 'mode') setMode(m);
+  else if (m.type === 'env') { // m.sun: unit vector to the Sun in the Mars-fixed frame; light and visible sun both follow it
+    const s = Cesium.Cartesian3.fromArray(m.sun);
+    sunLight.direction = Cesium.Cartesian3.negate(s, new Cesium.Cartesian3());
     viewer.scene.light = sunLight;
-    sky = m; applySky();
+    viewer.scene.sun.show = false;
+    sunDot.position = Cesium.Cartesian3.multiplyByScalar(s, 3e8, new Cesium.Cartesian3()); // ponytail: 3e8 m, past Deimos and inside the far plane
+    sunDot.show = is3D();
   } else if (m.type === 'clock') { // mission time drives the moons and orbiters
     const k = viewer.clock;
     k.currentTime = Cesium.JulianDate.addSeconds(t0, m.t, new Cesium.JulianDate());
@@ -585,17 +495,7 @@ addEventListener('message', ({ data: m }) => {
     const e = orbital.find(o => o.name && (o.name.startsWith(m.name) || m.name.startsWith(o.name)));
     if (e) { showInfo(e); viewer.trackedEntity = e; }
   }
-  else if (m.type === 'sites') for (const [name, agency, date, place, lat, lon, desc] of m.sites) {
-    if (/Curiosity|Perseverance/.test(name)) continue; // already drawn from traverses.js
-    groundDot(name, Cesium.Color.YELLOW, 8, `${agency} · landed ${date} · ${place}. ${desc}`, Cesium.Cartographic.fromDegrees(lon, lat, 0));
-  } else if (m.type === 'base') { // {pl, rover, survey}: {lat, lon, hdg?} each
-    for (const k in baseDots) {
-      if (m[k].hdg !== undefined) baseDots[k].hdg = m[k].hdg;
-      placeOnGround(baseDots[k], Cesium.Cartographic.fromDegrees(m[k].lon, m[k].lat));
-    }
-  } else if (m.type === 'mark') {
-    groundDot(m.name, Cesium.Color.fromCssColorString(m.color), 8, m.desc, Cesium.Cartographic.fromDegrees(m.lon, m.lat));
-  } else if (m.type === 'storms') { // real MDAD storm instances active at mission control's replay date
+  else if (m.type === 'storms') { // real MDAD storm instances active at mission control's replay date
     stormEnts.forEach(e => viewer.entities.remove(e));
     stormEnts = m.list.map(([lon, lat, r, id, seq]) => viewer.entities.add({
       name: `Dust storm ${id}`, position: Cesium.Cartesian3.fromDegrees(lon, lat, 0, mars),
