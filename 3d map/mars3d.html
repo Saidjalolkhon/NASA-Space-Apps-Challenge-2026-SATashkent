@@ -1,0 +1,432 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Mars 3D</title>
+<script>window.CESIUM_BASE_URL = 'https://cdn.jsdelivr.net/npm/cesium@1.120.0/Build/Cesium/';</script>
+<script src="https://cdn.jsdelivr.net/npm/cesium@1.120.0/Build/Cesium/Cesium.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/cesium@1.120.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+<style>html,body,#map{margin:0;height:100%;background:#000}
+.craft-label{position:absolute;left:0;top:0;cursor:pointer;white-space:nowrap}
+#info{position:absolute;top:50px;left:10px;z-index:2;width:300px;padding:12px;background:#111d;color:#eee;
+  font:14px/1.4 sans-serif;border:1px solid #555;border-radius:6px}
+#info h3{margin:0 0 6px}#info a{color:#8cf}#info button{margin:8px 6px 0 0;padding:5px 9px}
+#toggle{position:absolute;top:10px;left:10px;z-index:1;padding:6px 10px;font:14px sans-serif}</style>
+</head>
+<body>
+<div id="map"></div>
+<button id="toggle">Flat map</button>
+<button id="marsinfo" style="position:absolute;top:10px;left:240px;z-index:1;padding:6px 10px;font:14px sans-serif">About Mars</button>
+<div id="info" style="display:none"><h3></h3><p></p>
+  <button id="view">View closely</button><button id="land">Land here</button><button id="close">Close</button>
+  <a target="_blank">NASA mission page</a></div>
+<button id="eye" style="position:absolute;top:10px;left:120px;z-index:1;padding:6px 10px;font:14px sans-serif">Back to orbit</button>
+<button id="routeBtn" style="position:absolute;top:10px;left:345px;z-index:1;padding:6px 10px;font:14px sans-serif">Plan route</button>
+<button id="strandBtn" style="position:absolute;top:10px;left:440px;z-index:1;padding:6px 10px;font:14px sans-serif">Stranded!</button>
+<div id="hud" style="display:none;position:absolute;top:10px;right:10px;z-index:2;max-width:340px;padding:10px;background:#111d;color:#eee;
+  font:14px/1.5 monospace;border:1px solid #555;border-radius:6px;white-space:pre-line"></div>
+<script src="traverses.js"></script>
+<script src="moons.js"></script>
+<script>
+// Mars IAU radii (m)
+const mars = new Cesium.Ellipsoid(3396190, 3396190, 3376200);
+Cesium.Ellipsoid.default = mars;
+
+const trek = layer => new Cesium.UrlTemplateImageryProvider({
+  url: `https://trek.nasa.gov/tiles/Mars/EQ/${layer}/1.0.0/default/default028mm/{z}/{y}/{x}.jpg`,
+  tilingScheme: new Cesium.GeographicTilingScheme({ ellipsoid: mars }),
+  maximumLevel: 7,
+  credit: 'NASA Mars Trek',
+});
+
+const viewer = new Cesium.Viewer('map', {
+  globe: new Cesium.Globe(mars),
+  baseLayer: new Cesium.ImageryLayer(trek('Mars_Viking_MDIM21_ClrMosaic_global_232m')),
+  baseLayerPicker: false, geocoder: false, timeline: false, animation: false,
+  skyAtmosphere: false, infoBox: false, selectionIndicator: false, // infoBox iframe crashes on file://
+});
+// MOLA hillshade over the color mosaic for relief
+const shade = viewer.imageryLayers.addImageryProvider(trek('Mars_MGS_MOLA_ClrShade_merge_global_463m'));
+shade.alpha = 0.4;
+
+// Real 3D Mars relief: Cesium ion "Cesium Mars" 3D Tiles; replaces the flat globe while shown
+Cesium.Ion.defaultAccessToken = 'YOUR_CESIUM_ION_TOKEN';
+let terrain;
+Cesium.Cesium3DTileset.fromIonAssetId(3644333).then(t => {
+  // the tileset ships unlit and without normals: shade by the angle between the planet's
+  // outward direction and the sun, so it gets a day side and a night side
+  // ponytail: sphere normal ignores slopes; hills don't self-shadow
+  t.customShader = new Cesium.CustomShader({
+    lightingModel: Cesium.LightingModel.UNLIT,
+    fragmentShaderText: `void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
+      float d = dot(normalize(fsInput.attributes.positionWC), czm_lightDirectionWC);
+      material.diffuse *= mix(0.06, 1.0, smoothstep(-0.05, 0.25, d));
+    }`,
+  });
+  terrain = viewer.scene.primitives.add(t);
+  viewer.scene.globe.show = false;
+}).catch(err => console.error('Mars terrain failed, staying on flat map', err));
+
+const NASA3D = n => `https://raw.githubusercontent.com/nasa/NASA-3D-Resources/master/3D%20Models/${encodeURIComponent(n)}/${encodeURIComponent(n)}.glb`;
+const pins = [];
+
+// Rovers: landing site = first traverse point, path = full NASA traverse (traverses.js)
+// ponytail: traverses.js is a snapshot; re-run the download when the rovers move on
+const labels = []; // [entity, div]: HTML text labels, since Cesium's Label renderer left speckles around glyphs
+const htmlLabel = (entity, text, color, font) => {
+  const div = document.createElement('div');
+  div.className = 'craft-label';
+  div.textContent = text;
+  div.onclick = () => showInfo(entity);
+  div.style.color = color.toCssColorString();
+  div.style.font = font;
+  document.body.appendChild(div);
+  labels.push([entity, div]);
+};
+const rovers = [
+  ['Curiosity – Gale Crater', 'MSL', 'ORANGE', 'https://science.nasa.gov/mission/msl-curiosity/'],
+  ['Perseverance – Jezero Crater', 'M20', 'CYAN', 'https://science.nasa.gov/mission/mars-2020-perseverance/'],
+];
+for (const [name, key, col, link] of rovers) {
+  const p = TRAVERSES[key].pts, color = Cesium.Color[col];
+  viewer.entities.add({
+    polyline: { positions: Cesium.Cartesian3.fromDegreesArray(p, mars), width: 3, material: color,
+                clampToGround: true },
+  });
+  const pin = (label, i, size, model) => pins.push(viewer.entities.add({
+    name: label, position: Cesium.Cartesian3.fromDegrees(p[i], p[i + 1], 0, mars),
+    carto: Cesium.Cartographic.fromDegrees(p[i], p[i + 1], 0),
+    point: model ? undefined : { pixelSize: size, color, outlineColor: Cesium.Color.BLACK, outlineWidth: 1,
+                                 disableDepthTestDistance: Infinity },
+    // ponytail: no NASA Curiosity glTF exists, so both rovers use the Perseverance model (same chassis)
+    model: model && { uri: NASA3D('Mars 2020 Perseverance Rover'), minimumPixelSize: 24 },
+    properties: { link },
+  })) && htmlLabel(pins.at(-1), label, color, '13px sans-serif');
+  pin(`${name} landing site`, 0, 12);
+  pin(`${name.split(' ')[0]} now`, p.length - 2, 8, true);
+}
+// Every 20 frames, set each rover pin on the terrain as currently rendered (tracks LOD changes)
+let frame = 0;
+viewer.scene.postRender.addEventListener(scene => {
+  if (!terrain?.show || frame++ % 20) return;
+  for (const e of pins) {
+    const h = scene.sampleHeight(e.carto, pins);
+    if (h !== undefined) e.position = Cesium.Cartesian3.fromRadians(e.carto.longitude, e.carto.latitude, h, mars);
+  }
+});
+
+// Info panel: click any body/craft/rover (or its label) for facts + a close-up view
+const INFO = {
+  Mars: 'Fourth planet from the Sun. Radius 3,390 km, day 24 h 37 min, year 687 Earth days. Home to Olympus Mons (~22 km high) and Valles Marineris (~4,000 km long).',
+  Phobos: 'Larger of Mars\'s two moons, ~22 km across. Orbits every 7 h 39 min, faster than Mars turns, and is slowly spiralling inward.',
+  Deimos: 'Smaller, outer moon, ~12 km across. Orbits every 30.3 hours.',
+  'Mars Reconnaissance Orbiter': 'NASA orbiter, at Mars since 2006. Its HiRISE camera sees objects ~30 cm across; also relays rover data to Earth.',
+  'Mars Odyssey': 'NASA orbiter, at Mars since 2001, the longest-working Mars spacecraft. Mapped water ice below the surface.',
+  MAVEN: 'NASA orbiter, at Mars since 2014. Studies how Mars lost its atmosphere to space.',
+  'Mars Express': 'ESA orbiter, at Mars since 2003. Its HRSC camera maps the planet in 3D colour.',
+  'ExoMars TGO': 'ESA–Roscosmos Trace Gas Orbiter, at Mars since 2016. Hunts for methane and other trace gases.',
+  Curiosity: 'NASA rover, landed 6 Aug 2012 in Gale Crater. Nuclear-powered, climbing Mount Sharp to read Mars\'s climate history in its rock layers.',
+  Perseverance: 'NASA rover, landed 18 Feb 2021 in Jezero Crater, an ancient lake delta. Seeks signs of past life and stores rock samples for return to Earth.',
+};
+const info = document.getElementById('info');
+let shown;
+function showInfo(entity) {
+  shown = entity;
+  const name = entity?.name ?? 'Mars';
+  info.querySelector('h3').textContent = name;
+  info.querySelector('p').textContent = INFO[Object.keys(INFO).find(k => name.startsWith(k))] ?? '';
+  document.getElementById('view').style.display = '';
+  document.getElementById('land').style.display = 'none';
+  const link = entity?.properties?.link?.getValue();
+  info.querySelector('a').style.display = link ? '' : 'none';
+  if (link) info.querySelector('a').href = link;
+  info.style.display = '';
+}
+document.getElementById('close').onclick = () => { info.style.display = 'none'; viewer.trackedEntity = undefined; };
+document.getElementById('view').onclick = () => {
+  if (!shown) return viewer.camera.flyHome();
+  if (pins.includes(shown)) // rover: fly to a 40 m view; tracking a ground point would fight the terrain clamp
+    viewer.flyTo(shown, { offset: new Cesium.HeadingPitchRange(0, -0.35, 40) });
+  else viewer.trackedEntity = shown; // orbiting body: camera follows it
+};
+document.getElementById('marsinfo').onclick = () => showInfo(null);
+
+// Ground mode: click the surface -> stand there at eye height, drag to look around
+const eye = document.getElementById('eye');
+let ground = false, orbitView;
+const ssc = viewer.scene.screenSpaceCameraController;
+function setGround(on) {
+  ground = on;
+  ssc.enableRotate = ssc.enableZoom = ssc.enableTilt = ssc.enableTranslate = !on;
+  ssc.lookEventTypes = on ? Cesium.CameraEventType.LEFT_DRAG
+                          : { eventType: Cesium.CameraEventType.LEFT_DRAG, modifier: Cesium.KeyboardEventModifier.SHIFT };
+  eye.style.display = on ? '' : 'none';
+}
+setGround(false);
+eye.onclick = () => { setGround(false); game = null; hud(); viewer.camera.flyTo(orbitView); };
+
+// WASD walk (Shift = run); each frame keep the eye 1.7 m above the ground currently rendered
+const keys = new Set();
+addEventListener('keydown', e => keys.add(e.code));
+addEventListener('keyup', e => keys.delete(e.code));
+let last = performance.now();
+viewer.scene.preRender.addEventListener(scene => {
+  const now = performance.now(), dt = (now - last) / 1000;
+  last = now;
+  if (!ground) return;
+  const running = keys.has('ShiftLeft') || keys.has('ShiftRight');
+  const cam = scene.camera, step = (running ? 100 : 10) * dt; // m/s: walk, Shift = run
+  if (game) tickGame(cam, dt, running);
+  if (keys.has('KeyW')) cam.moveForward(step);
+  if (keys.has('KeyS')) cam.moveBackward(step);
+  if (keys.has('KeyA')) cam.moveLeft(step);
+  if (keys.has('KeyD')) cam.moveRight(step);
+  const c = Cesium.Cartographic.fromCartesian(cam.positionWC, mars);
+  // ponytail: flat-map mode has no relief, so ground height is 0 there
+  const h = terrain?.show ? scene.sampleHeight(c) : 0;
+  if (h === undefined) return; // tiles not drawn here yet; retry next frame
+  cam.setView({
+    destination: Cesium.Cartesian3.fromRadians(c.longitude, c.latitude, h + 1.7, mars),
+    orientation: { heading: cam.heading, pitch: cam.pitch, roll: 0 },
+  });
+});
+
+// Click: named object -> info panel; anywhere else on Mars -> ask, then land there
+viewer.screenSpaceEventHandler.setInputAction(e => {
+  if (ground) return;
+  const p = viewer.scene.pick(e.position);
+  if (p?.id?.name) return showInfo(p.id);
+  viewer.trackedEntity = undefined;
+  const hit = terrain?.show ? viewer.scene.pickPosition(e.position)
+                            : viewer.camera.pickEllipsoid(e.position, mars);
+  if (!hit) return;
+  const c = Cesium.Cartographic.fromCartesian(hit, mars);
+  if (routeMode) return addRoutePoint(c);
+  showSurvival(c);
+}, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+// Fly down to the surface point c, then switch to ground mode
+function landAt(c) {
+  info.style.display = 'none';
+  orbitView = { destination: viewer.camera.positionWC.clone(),
+                orientation: { heading: viewer.camera.heading, pitch: viewer.camera.pitch, roll: 0 } };
+  viewer.camera.flyTo({
+    // land a bit high: the clicked height is from coarse orbit tiles; ground mode then settles to 1.7 m
+    destination: Cesium.Cartesian3.fromRadians(c.longitude, c.latitude, c.height + 50, mars),
+    orientation: { heading: 0, pitch: 0, roll: 0 },
+    duration: 4, complete: () => setGround(true),
+  });
+}
+
+// ===== Survival guide: habitability score, route planner, stranded game =====
+const deg = Cesium.Math.toDegrees, RM = 3389500; // mean Mars radius (m)
+const hudDiv = document.getElementById('hud');
+const hud = text => { hudDiv.style.display = text ? '' : 'none'; hudDiv.textContent = text ?? ''; };
+// Terrain height (m) at lon/lat radians, from tiles currently rendered; undefined if not drawn
+const heightAt = (lon, lat) => terrain?.show ? viewer.scene.sampleHeight(new Cesium.Cartographic(lon, lat), pins) : 0;
+// Surface pressure: ~610 Pa at datum, 11.1 km scale height
+// ponytail: annual mean; real pressure swings ~25% with seasons (CO2 frost at the poles)
+const pressure = h => 610 * Math.exp(-h / 11100);
+
+// Score a surface point on five survival factors, 0 (bad) .. 2 (good) each
+function survival(c) {
+  const lat = deg(c.latitude), P = pressure(c.height), d = 500 / RM;
+  const hs = [[d, 0], [-d, 0], [0, d], [0, -d]]
+    .map(([x, y]) => heightAt(c.longitude + x / Math.cos(c.latitude), c.latitude + y));
+  const slope = hs.includes(undefined) ? NaN : deg(Math.atan(Math.hypot(hs[0] - hs[1], hs[2] - hs[3]) / 1000));
+  const sun = 590 * Math.cos(c.latitude) / Math.PI;  // day-average W/m² at equinox, clear sky
+  const dose = 0.67 * Math.sqrt(850 / P);            // mSv/day, scaled from Curiosity RAD at Gale
+  // ponytail: ice by latitude band (SHARAD/Phoenix pattern); swap for GRS hydrogen map if accuracy matters
+  const aLat = Math.abs(lat);
+  return [
+    ['Air pressure', `${P.toFixed(0)} Pa`, P >= 610 ? 2 : P >= 450 ? 1 : 0,
+     P >= 610 ? 'liquid water can exist briefly' : 'water boils away instantly'],
+    ['Water ice', aLat > 55 ? 'ground ice < 1 m deep' : aLat > 35 ? 'buried glaciers likely' : 'none near surface',
+     aLat > 55 ? 2 : aLat > 35 ? 1 : 0, 'drinking water, O2 and rocket fuel'],
+    ['Solar power', `${sun.toFixed(0)} W/m²`, sun > 150 ? 2 : sun > 90 ? 1 : 0, 'day average'],
+    ['Radiation', `≈${dose.toFixed(2)} mSv/day`, dose < 0.6 ? 2 : dose < 0.75 ? 1 : 0, 'thicker air = more shielding'],
+    ['Slope', isNaN(slope) ? 'unknown (zoom in)' : `${slope.toFixed(1)}°`,
+     isNaN(slope) ? 1 : slope < 5 ? 2 : slope < 15 ? 1 : 0, 'safe landing and building'],
+  ];
+}
+function showSurvival(c) {
+  const rows = survival(c), score = rows.reduce((s, r) => s + r[2], 0);
+  const verdict = score >= 8 ? 'Good base site' : score >= 5 ? 'Survivable with effort' : 'Hostile';
+  shown = null;
+  info.querySelector('h3').textContent = `${deg(c.latitude).toFixed(2)}°, ${deg(c.longitude).toFixed(2)}° · ${(c.height / 1000).toFixed(1)} km`;
+  info.querySelector('p').innerHTML = `<b>Survival score ${score}/10 — ${verdict}</b><br>` + rows.map(([k, v, s, why]) =>
+    `<span style="color:${['#f55', '#fc3', '#5d5'][s]}">●</span> <b>${k}</b>: ${v}<br><small style="color:#aaa">${why}</small>`).join('<br>');
+  info.querySelector('a').style.display = 'none';
+  document.getElementById('view').style.display = 'none';
+  const land = document.getElementById('land');
+  land.style.display = '';
+  land.onclick = () => landAt(c);
+  info.style.display = '';
+}
+
+// A* over an N×N height grid (row-major, idx = row*N + col), cell size dx×dy m.
+// Cost = distance × (1 + (slope/10°)²); slopes over 25° or NaN cells are impassable.
+// ponytail: linear-scan open list, O(n²); use a binary heap if the grid grows past ~100×100
+function astar(H, N, dx, dy, s, g) {
+  const cost = new Float64Array(N * N).fill(Infinity), from = new Int32Array(N * N).fill(-1), done = new Uint8Array(N * N);
+  const gx = g % N, gy = (g / N) | 0;
+  const f = k => cost[k] + Math.hypot((k % N - gx) * dx, (((k / N) | 0) - gy) * dy);
+  cost[s] = 0;
+  const open = [s];
+  while (open.length) {
+    let bi = 0;
+    for (let k = 1; k < open.length; k++) if (f(open[k]) < f(open[bi])) bi = k;
+    const u = open.splice(bi, 1)[0];
+    if (u === g) { const p = []; for (let k = g; k !== -1; k = from[k]) p.unshift(k); return p; }
+    if (done[u]) continue;
+    done[u] = 1;
+    const x = u % N, y = (u / N) | 0;
+    for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) {
+      const nx = x + ox, ny = y + oy, v = ny * N + nx;
+      if ((!ox && !oy) || nx < 0 || ny < 0 || nx >= N || ny >= N || done[v] || isNaN(H[v])) continue;
+      const run = Math.hypot(ox * dx, oy * dy), slope = deg(Math.atan(Math.abs(H[v] - H[u]) / run));
+      if (slope > 25) continue;
+      const c = cost[u] + run * (1 + (slope / 10) ** 2);
+      if (c < cost[v]) { cost[v] = c; from[v] = u; open.push(v); }
+    }
+  }
+  return null;
+}
+{ // self-check: a wall across row 2 with a gap at column 4 must be routed through the gap
+  const H = new Float64Array(25);
+  for (let k = 0; k < 4; k++) H[10 + k] = 1e4;
+  const p = astar(H, 5, 10, 10, 0, 24);
+  console.assert(p && p.includes(14) && !p.some(k => k >= 10 && k < 14), 'astar should route through the gap');
+}
+
+let routeMode = false, routePts = [], routeLine;
+document.getElementById('routeBtn').onclick = () => {
+  routeMode = true; routePts = [];
+  if (routeLine) viewer.entities.remove(routeLine);
+  info.style.display = 'none';
+  hud('ROUTE PLANNER\nClick the start point.\n(Keep both points on screen: heights come from rendered terrain.)');
+};
+function addRoutePoint(c) {
+  routePts.push(c);
+  if (routePts.length < 2) return hud('ROUTE PLANNER\nClick the destination.');
+  routeMode = false;
+  hud('Planning safe path…');
+  setTimeout(() => planRoute(...routePts), 30); // let the HUD paint first
+}
+// Square grid (in metres) around both points, padded 20%; walk it with A*, draw and report the path
+function planRoute(a, b) {
+  const N = 48, lat0 = (a.latitude + b.latitude) / 2, cos0 = Math.cos(lat0);
+  const span = 1.4 * Math.max(Math.abs(a.longitude - b.longitude) * cos0, Math.abs(a.latitude - b.latitude)) + 200 / RM;
+  const lonC = (a.longitude + b.longitude) / 2, step = span / (N - 1);
+  const lonOf = i => lonC + (i - (N - 1) / 2) * step / cos0, latOf = j => lat0 + (j - (N - 1) / 2) * step;
+  const H = new Float64Array(N * N);
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) H[j * N + i] = heightAt(lonOf(i), latOf(j)) ?? NaN;
+  const cell = c => Math.round((c.latitude - latOf(0)) / step) * N + Math.round((c.longitude - lonOf(0)) * cos0 / step);
+  const d = step * RM, path = astar(H, N, d, d, cell(a), cell(b));
+  if (!path) return hud('ROUTE PLANNER\nNo safe path (slopes > 25° block every way, or terrain off-screen).\nZoom so both points are visible and retry.');
+  let dist = 0, climb = 0, maxSlope = 0;
+  for (let k = 1; k < path.length; k++) {
+    const [u, v] = [path[k - 1], path[k]], dz = H[v] - H[u];
+    const run = d * Math.hypot(v % N - u % N, ((v / N) | 0) - ((u / N) | 0));
+    dist += Math.hypot(run, dz); climb += Math.max(0, dz);
+    maxSlope = Math.max(maxSlope, deg(Math.atan(Math.abs(dz) / run)));
+  }
+  routeLine = viewer.entities.add({ polyline: {
+    positions: Cesium.Cartesian3.fromRadiansArray(path.flatMap(k => [lonOf(k % N), latOf((k / N) | 0)]), mars),
+    width: 4, material: Cesium.Color.YELLOW, clampToGround: true } });
+  const hours = dist / 1000 / 3; // ponytail: 3 km/h suited walking pace, Apollo EVA average
+  hud(`ROUTE PLANNER (on foot)\nDistance:  ${(dist / 1000).toFixed(2)} km\nTotal climb: ${climb.toFixed(0)} m\nSteepest:  ${maxSlope.toFixed(1)}°\n` +
+      `Walk time: ${hours.toFixed(1)} h\nOxygen:    ${(hours * 0.08).toFixed(2)} kg\nEVAs (8 h suit): ${Math.ceil(hours / 8)}`);
+}
+
+// Stranded: dropped 0.8–2 km from a random rover/landing site with just enough O2 to walk there
+let game = null;
+document.getElementById('strandBtn').onclick = () => {
+  const t = pins[Math.floor(Math.random() * pins.length)], ang = Math.random() * 2 * Math.PI;
+  const dist = 800 + Math.random() * 1200, lat = t.carto.latitude;
+  const c = new Cesium.Cartographic(t.carto.longitude + dist * Math.sin(ang) / (RM * Math.cos(lat)),
+                                    lat + dist * Math.cos(ang) / RM, heightAt(t.carto.longitude, lat) ?? 0);
+  game = { target: t, o2: dist / 10 * 1.6 }; // seconds of O2: walking time at 10 m/s + 60% margin
+  hud('STRANDED!\nYour suit is leaking. Reach the beacon before O2 runs out.\nWASD to walk, drag to look. Shift runs but burns O2 3×.');
+  landAt(c);
+};
+function tickGame(cam, dt, running) {
+  const c = Cesium.Cartographic.fromCartesian(cam.positionWC, mars), t = game.target.carto;
+  const dN = (t.latitude - c.latitude) * RM, dE = (t.longitude - c.longitude) * RM * Math.cos(c.latitude);
+  const dist = Math.hypot(dN, dE);
+  game.o2 -= dt * (running ? 3 : 1);
+  if (dist < 60) { hud(`RESCUED at ${game.target.name}!\nO2 left: ${game.o2.toFixed(0)} s`); game = null; return; }
+  if (game.o2 <= 0) { hud(`OUT OF OXYGEN\n${dist.toFixed(0)} m short of ${game.target.name}.\nPress "Back to orbit" and try again.`); game = null; return; }
+  const rel = Math.atan2(dE, dN) - cam.heading;
+  const arrow = '↑↗→↘↓↙←↖'[((Math.round(rel / (Math.PI / 4)) % 8) + 8) % 8];
+  hud(`STRANDED  O2 ${game.o2.toFixed(0)} s ${'█'.repeat(Math.max(0, Math.ceil(game.o2 / 20)))}\n` +
+      `Beacon: ${game.target.name}\n${arrow}  ${dist.toFixed(0)} m`);
+}
+
+// Sun lighting: day side bright, night side dark
+viewer.scene.globe.enableLighting = true;
+viewer.scene.light = new Cesium.SunLight({ intensity: 2.5 });
+viewer.clock.shouldAnimate = true;
+viewer.clock.multiplier = 1; // real-time speed
+
+// Moons + orbiters: [name, altitude km, period h, inclination deg, node deg, color, shape]
+// shape: moon radii in m (true-size ellipsoid), NASA model name, or nothing (dot only)
+// ponytail: circular orbits fixed in Mars frame, models unoriented; use SPICE/Horizons if accuracy matters
+const R = 3389.5;
+const bodies = [
+  ['Phobos', 9376 - R, 7.654, 1.1, 0, 'WHITE', [13000, 11400, 9100]],
+  ['Deimos', 23463 - R, 30.31, 1.8, 40, 'LIGHTGRAY', [7800, 6000, 5100]],
+  ['Mars Reconnaissance Orbiter', 300, 1.87, 93, 10, 'CYAN', 'Mars Reconnaissance Orbiter (MRO) (A)'],
+  ['Mars Odyssey', 400, 1.97, 93, 100, 'ORANGE', 'Mars Odyssey'],
+  ['MAVEN', 3000, 4.5, 75, 200, 'LIME', 'Mars Atmosphere and Volatile EvolutioN (MAVEN) (A)'],
+  ['Mars Express', 4000, 7.0, 86, 280, 'MAGENTA'],
+  ['ExoMars TGO', 400, 2.0, 74, 160, 'GOLD'],
+];
+// MOON_MODELS (moons.js): Phobos/Deimos true-proportion GLBs with their surface photo maps baked in
+// ponytail: moons aren't rotated to face Mars (tidally locked), so the visible side is arbitrary
+const orbital = [];
+const t0 = Cesium.JulianDate.clone(viewer.clock.currentTime);
+for (const [name, alt, period, inc, node, col, shape] of bodies) {
+  const natural = Array.isArray(shape);
+  const r = (R + alt) * 1000, i = inc * Math.PI / 180, O = node * Math.PI / 180;
+  const at = a => new Cesium.Cartesian3(
+    r * (Math.cos(O) * Math.cos(a) - Math.sin(O) * Math.sin(a) * Math.cos(i)),
+    r * (Math.sin(O) * Math.cos(a) + Math.cos(O) * Math.sin(a) * Math.cos(i)),
+    r * Math.sin(a) * Math.sin(i));
+  const color = Cesium.Color[col];
+  orbital.push(viewer.entities.add({
+    name,
+    position: new Cesium.CallbackProperty(t =>
+      at(2 * Math.PI * Cesium.JulianDate.secondsDifference(t, t0) / (period * 3600)), false),
+    point: shape ? undefined : { pixelSize: 7, color },
+    model: natural ? { uri: MOON_MODELS[name], minimumPixelSize: 12 }
+         : typeof shape === 'string' ? { uri: NASA3D(shape), minimumPixelSize: 40 } : undefined,
+  }));
+  htmlLabel(orbital.at(-1), name, color, natural ? 'bold 14px sans-serif' : '12px sans-serif');
+  orbital.push(viewer.entities.add({
+    polyline: { positions: Array.from({ length: 121 }, (_, k) => at(k * Math.PI / 60)),
+                width: 1, material: Cesium.Color.WHITE.withAlpha(0.5), arcType: Cesium.ArcType.NONE },
+  }));
+}
+
+// Each frame: place every HTML label above its craft, hidden when Mars is in the way
+viewer.scene.postRender.addEventListener((scene, time) => {
+  const occluder = new Cesium.EllipsoidalOccluder(mars, scene.camera.positionWC);
+  for (const [entity, div] of labels) {
+    const p = entity.position.getValue(time);
+    const s = occluder.isPointVisible(p) && Cesium.SceneTransforms.wgs84ToWindowCoordinates(scene, p);
+    div.style.display = s ? '' : 'none';
+    if (s) div.style.transform = `translate(${s.x}px, ${s.y - 10}px) translate(-50%, -100%)`;
+  }
+});
+
+// Toggle: switch between 3D terrain and the flat Viking + MOLA map
+document.getElementById('toggle').onclick = e => {
+  if (!terrain) return;
+  terrain.show = !terrain.show;
+  viewer.scene.globe.show = !terrain.show;
+  e.target.textContent = terrain.show ? 'Flat map' : '3D terrain';
+};
+</script>
+</body>
+</html>
